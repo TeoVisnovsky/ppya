@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="sk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PPYA | Database</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell db-shell">
+      <header class="hero compact-hero">
+        <div>
+          <p class="eyebrow"><a href="/">Spat na zoznam</a></p>
+          <h1>Databazovy prehlad</h1>
+          <p class="hero-copy">Jednoduchy prehliadac tabuliek ulozenych v PostgreSQL.</p>
+        </div>
+        <div class="declaration-switcher">
+          <label>
+            <span>Pocet riadkov</span>
+            <select id="limitSelect">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="250">250</option>
+            </select>
+          </label>
+        </div>
+      </header>
+
+      <main class="db-layout">
+        <section class="panel db-sidebar-panel">
+          <div class="panel-header inline-header">
+            <div>
+              <h2>Tabulky</h2>
+              <p id="tablesInfo">Nacitavam...</p>
+            </div>
+            <button id="reloadTablesButton" class="ghost-button" type="button">Obnovit</button>
+          </div>
+          <div id="tablesList" class="tables-list"></div>
+        </section>
+
+        <section class="panel db-table-panel">
+          <div class="panel-header inline-header">
+            <div>
+              <h2 id="tableTitle">Vyber tabulku</h2>
+              <p id="tableMeta">Po vybere tabulky sa zobrazia riadky.</p>
+            </div>
+            <div class="db-pagination">
+              <button id="prevPageButton" class="ghost-button" type="button">Predchadzajuca</button>
+              <button id="nextPageButton" class="ghost-button" type="button">Dalsia</button>
+            </div>
+          </div>
+          <div id="tableContainer" class="table-wrap"></div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/admin.js"></script>
+  </body>
+</html>

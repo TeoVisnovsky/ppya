@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="sk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PPYA | Hlasovania</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero compact-hero">
+        <div>
+          <p class="eyebrow"><a href="/">Spat na zoznam</a></p>
+          <h1>Statistika hlasovani</h1>
+          <p class="hero-copy">Jeden riadok na politika s poctami hlasovani a spojenym textom vsetkych zaznamov.</p>
+        </div>
+      </header>
+
+      <main class="content-grid voting-layout">
+        <section class="panel filters-panel">
+          <div class="panel-header">
+            <h2>Filtre</h2>
+            <p>Vyhladaj politika alebo obmedz tabulku na jedno volebne obdobie.</p>
+          </div>
+          <div class="filters">
+            <label>
+              <span>Meno alebo UserId</span>
+              <input id="votingSearchInput" type="search" placeholder="napr. Fico" />
+            </label>
+            <label>
+              <span>CisObdobia</span>
+              <select id="votingPeriodSelect">
+                <option value="">Vsetky obdobia</option>
+              </select>
+            </label>
+            <label>
+              <span>Zoradenie</span>
+              <select id="votingSortSelect">
+                <option value="nameAsc">Abecedne podla mena</option>
+                <option value="dateDesc">Najnovsie stiahnute</option>
+                <option value="schodzaAsc">Najmenej zaznamov</option>
+                <option value="voteAsc">Najmenej Za</option>
+              </select>
+            </label>
+            <button id="votingReloadButton" class="ghost-button" type="button">Obnovit</button>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-header inline-header">
+            <div>
+              <h2>Tabulka hlasovani</h2>
+              <p id="votingResultsInfo">Nacitavam data...</p>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Meno</th>
+                  <th>UserId</th>
+                  <th>CisObdobia</th>
+                  <th>Zaznamov</th>
+                  <th>Za</th>
+                  <th>Proti</th>
+                  <th>Zdrzal(a) sa</th>
+                  <th>Nehlasoval(a)</th>
+                  <th>Nepritomny(a)</th>
+                  <th>Transcript</th>
+                </tr>
+              </thead>
+              <tbody id="votingTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/voting.js"></script>
+  </body>
+</html>
