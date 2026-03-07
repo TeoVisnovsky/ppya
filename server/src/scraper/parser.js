@@ -36,6 +36,16 @@ function normalizeLabel(value) {
   return cleanText(value).replace(/:$/, "").toLowerCase();
 }
 
+function parseInteger(value) {
+  const digits = String(value || "").replace(/[^\d]/g, "");
+  if (!digits) {
+    return 0;
+  }
+
+  const parsed = Number(digits);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function parseEuroAmount(value) {
   if (!value) {
     return null;
@@ -172,6 +182,71 @@ function extractRowsFromTwoColumnRows($) {
   });
 
   return rowsByLabel;
+}
+
+function extractVotingPoliticianName(value) {
+  const cleaned = cleanText(value).replace(/Vytlačiť stránku.*$/i, "").trim();
+  const resultMatch = cleaned.match(/Výsledky vyhľadávania v hlasovaniach NR SR\s*-\s*(.+)$/i);
+  if (resultMatch) {
+    return cleanText(resultMatch[1]);
+  }
+
+  if (/Vyhľadávanie v hlasovaniach NR SR/i.test(cleaned)) {
+    return null;
+  }
+
+  return cleaned || null;
+}
+
+const VOTING_SUMMARY_LABELS = {
+  za: "zaCount",
+  proti: "protiCount",
+  "zdržal(a) sa": "zdrzalSaCount",
+  "nehlasoval(a)": "nehlasovalCount",
+  "neprítomný(á)": "nepritomnyCount",
+  "neplatných hlasov": "neplatnychHlasovCount",
+};
+
+export function parseVotingSummaryHtml({ html, sourceUrl, cisObdobia, poslanecMasterId }) {
+  const $ = cheerio.load(html);
+  const headingText = cleanText($("h1").first().text()) || cleanText($("title").text());
+  const politicianName = extractVotingPoliticianName(headingText);
+  const summaryPanel = $("div.voting_stats_summary_full, div.voting_stats_ummary_full").first();
+
+  if (!politicianName || summaryPanel.length === 0) {
+    return null;
+  }
+
+  const summary = {
+    zaCount: 0,
+    protiCount: 0,
+    zdrzalSaCount: 0,
+    nehlasovalCount: 0,
+    nepritomnyCount: 0,
+    neplatnychHlasovCount: 0,
+  };
+
+  summaryPanel.children("div").each((_, section) => {
+    const label = normalizeLabel($(section).find("strong").first().text());
+    const key = VOTING_SUMMARY_LABELS[label];
+    if (!key) {
+      return;
+    }
+
+    summary[key] = parseInteger($(section).find("span").first().text());
+  });
+
+  if (summaryPanel.find("strong").length === 0) {
+    return null;
+  }
+
+  return {
+    cisObdobia,
+    poslanecMasterId,
+    politicianName,
+    sourceUrl,
+    ...summary,
+  };
 }
 
 export function parseDeclarationHtml({ html, sourceUrl, userId, fallbackName }) {

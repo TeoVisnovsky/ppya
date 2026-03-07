@@ -85,6 +85,22 @@ npm run scrape -- 20
 
 The numeric argument is optional and sets max politician profiles to process.
 
+To scrape voting summaries per politician and per `CisObdobia` into both local PostgreSQL and Supabase at once:
+
+```bash
+npm run scrape:voting
+```
+
+Optional positional arguments:
+- first argument: max `PoslanecMasterID` to probe
+- second argument: max `CisObdobia` to probe
+
+Example:
+
+```bash
+npm run scrape:voting -- 1500 9
+```
+
 ## 6. Start API server
 
 ```bash
@@ -105,6 +121,7 @@ Server endpoints:
 - `GET /api/health`
 - `POST /api/migrate`
 - `POST /api/scrape?limit=20`
+- `POST /api/scrape/voting?maxPoliticianMasterId=1500&maxPeriod=9`
 - `GET /api/politicians?limit=100`
 - `GET /api/politicians/:id`
 - `GET /api/politicians/:id/declarations`
@@ -141,4 +158,47 @@ node src/scraper/nrsrScraper.js
 
 - Scraping logic currently parses the declaration table and maps data into category-specific tables.
 - `declaration_voting` exists in schema for your requested `hlasovanie` category and can be populated when source pages expose voting records.
+- `politician_voting_stats` stores aggregate voting counts per politician and per `CisObdobia`, matched back to existing `politicians` rows by normalized name.
+- The voting scraper writes to every configured target in `LOCAL_DATABASE_URL` and `SUPABASE_DATABASE_URL`, deduplicating identical connection strings.
 - `searchable_chunks` gets a `vector(1536)` column only when `pgvector` is available in your PostgreSQL installation.
+
+## Move Local Data To Supabase
+
+If you already scraped data into your local PostgreSQL and want to move it to Supabase safely:
+
+1. Keep your local database running.
+2. Use the included migration script, which first creates local backups and only then imports to Supabase.
+
+Example:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\database\copy-local-to-supabase.ps1 `
+	-SourceDatabaseUrl "postgresql://postgres:your_local_password@localhost:5432/ppya" `
+	-TargetDatabaseUrl "your_supabase_connection_string"
+```
+
+What the script does:
+- creates a full backup of your local database
+- creates a data-only SQL backup of the `public` schema
+- runs this project's migrations against the Supabase target
+- imports your local data into Supabase
+
+Backups are saved in `database/backups/`.
+
+If Supabase rejects the connection, use the exact connection string from Supabase and include `?sslmode=require` when needed.
+
+## Restore A Backup To Any Target
+
+To restore one of the saved SQL backups into either local PostgreSQL or Supabase:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\database\restore-backup-to-target.ps1 `
+	-TargetDatabaseUrl "your_target_database_url" `
+	-BackupFile ".\database\backups\local_public_data_YYYYMMDD_HHMMSS.sql"
+```
+
+The restore script:
+- runs migrations on the target first
+- truncates the `public` schema tables
+- imports the backup file
+- reseeds serial sequences after import

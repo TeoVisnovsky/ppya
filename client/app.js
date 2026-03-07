@@ -185,10 +185,21 @@ async function loadPoliticians() {
   elements.resultsInfo.textContent = "Nacitavam data...";
 
   const response = await fetch("/api/politicians?limit=5000");
-  const payload = await response.json();
+  let payload = null;
 
-  if (!response.ok || !payload.ok) {
-    throw new Error(payload.error || "Nepodarilo sa nacitat politikov.");
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok || !payload?.ok) {
+    const message = payload?.error || "Nepodarilo sa nacitat politikov.";
+    if (response.status >= 500) {
+      throw new Error(`Server error: ${message}`);
+    }
+
+    throw new Error(message);
   }
 
   state.politicians = payload.rows;
@@ -210,7 +221,7 @@ function renderError(error) {
   elements.resultsInfo.textContent = "Chyba pri nacitani";
   elements.tableBody.innerHTML = `
     <tr>
-      <td colspan="8"><div class="error-box">${error.message}</div></td>
+      <td colspan="8"><div class="error-box">${escapeHtml(error.message || "Nepodarilo sa nacitat data.")}</div></td>
     </tr>
   `;
 }

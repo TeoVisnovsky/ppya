@@ -4,7 +4,7 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import { config } from "../config.js";
 import { saveDeclaration } from "../db/repositories.js";
-import { pool } from "../db/pool.js";
+import { closeAllPools, getScraperWriteTargets } from "../db/pool.js";
 import { parseDeclarationHtml } from "./parser.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,15 +64,39 @@ async function fetchDeclarationForPolitician({ userId, name }) {
 export async function runScrape({ limit } = {}) {
   const politicians = await fetchList();
   const selected = typeof limit === "number" ? politicians.slice(0, limit) : politicians;
+  const targets = getScraperWriteTargets();
 
   let saved = 0;
   const errors = [];
+  const byTarget = Object.fromEntries(targets.map((target) => [target.name, { saved: 0, errors: 0 }]));
 
   for (const politician of selected) {
     try {
       const declaration = await fetchDeclarationForPolitician(politician);
-      await saveDeclaration(declaration);
-      saved += 1;
+      let savedAnywhere = false;
+
+      for (const target of targets) {
+        try {
+          await saveDeclaration(declaration, target.pool);
+          savedAnywhere = true;
+          saved += 1;
+          byTarget[target.name].saved += 1;
+        } catch (error) {
+          byTarget[target.name].errors += 1;
+          errors.push({
+            userId: politician.userId,
+            target: target.name,
+            message: error.message,
+          });
+        }
+      }
+
+      if (!savedAnywhere && targets.length === 0) {
+        errors.push({
+          userId: politician.userId,
+          message: "No configured database targets available",
+        });
+      }
     } catch (error) {
       errors.push({
         userId: politician.userId,
@@ -86,9 +110,11 @@ export async function runScrape({ limit } = {}) {
   }
 
   return {
+    targets: targets.map((target) => target.name),
     totalDiscovered: politicians.length,
     attempted: selected.length,
     saved,
+    byTarget,
     errors,
   };
 }
@@ -100,11 +126,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   runScrape({ limit })
     .then(async (result) => {
       console.log(JSON.stringify(result, null, 2));
-      await pool.end();
+      await closeAllPools();
     })
     .catch(async (error) => {
       console.error(error);
-      await pool.end();
+      await closeAllPools();
       process.exitCode = 1;
     });
 }

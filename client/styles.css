@@ -104,6 +104,12 @@ h2 {
   grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
 }
 
+.db-layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -247,6 +253,43 @@ tbody tr:hover {
   min-width: 220px;
 }
 
+.tables-list {
+  display: grid;
+  gap: 10px;
+}
+
+.table-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-strong);
+  color: var(--ink);
+}
+
+.table-item.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.table-item small {
+  color: var(--muted);
+}
+
+.db-pagination {
+  display: flex;
+  gap: 10px;
+}
+
+.db-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .error-box {
   padding: 18px;
   border: 1px solid rgba(220, 38, 38, 0.18);
@@ -258,6 +301,7 @@ tbody tr:hover {
 @media (max-width: 960px) {
   .content-grid,
   .detail-layout,
+  .db-layout,
   .hero {
     grid-template-columns: 1fr;
     flex-direction: column;

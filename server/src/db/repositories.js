@@ -155,8 +155,8 @@ async function replaceCategoryItems(client, tableName, declarationId, items) {
   }
 }
 
-export async function saveDeclaration(payload) {
-  const client = await pool.connect();
+export async function saveDeclaration(payload, dbPool = pool) {
+  const client = await dbPool.connect();
   try {
     await client.query("BEGIN");
 
@@ -189,6 +189,71 @@ export async function saveDeclaration(payload) {
   } finally {
     client.release();
   }
+}
+
+export async function listPoliticiansForMatching(dbPool = pool) {
+  const result = await dbPool.query(
+    `
+      SELECT id, nrsr_user_id, full_name
+      FROM politicians
+      WHERE full_name IS NOT NULL
+      ORDER BY id ASC
+    `,
+  );
+
+  return result.rows;
+}
+
+export async function savePoliticianVotingStats(payload, dbPool = pool) {
+  const result = await dbPool.query(
+    `
+      INSERT INTO politician_voting_stats (
+        politician_id,
+        cis_obdobia,
+        poslanec_master_id,
+        source_politician_name,
+        za_count,
+        proti_count,
+        zdrzal_sa_count,
+        nehlasoval_count,
+        nepritomny_count,
+        neplatnych_hlasov_count,
+        source_url,
+        scraped_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      ON CONFLICT (politician_id, cis_obdobia)
+      DO UPDATE SET
+        poslanec_master_id = EXCLUDED.poslanec_master_id,
+        source_politician_name = EXCLUDED.source_politician_name,
+        za_count = EXCLUDED.za_count,
+        proti_count = EXCLUDED.proti_count,
+        zdrzal_sa_count = EXCLUDED.zdrzal_sa_count,
+        nehlasoval_count = EXCLUDED.nehlasoval_count,
+        nepritomny_count = EXCLUDED.nepritomny_count,
+        neplatnych_hlasov_count = EXCLUDED.neplatnych_hlasov_count,
+        source_url = EXCLUDED.source_url,
+        scraped_at = NOW(),
+        updated_at = NOW()
+      RETURNING id
+    `,
+    [
+      payload.politicianId,
+      payload.cisObdobia,
+      payload.poslanecMasterId,
+      payload.sourcePoliticianName,
+      payload.zaCount,
+      payload.protiCount,
+      payload.zdrzalSaCount,
+      payload.nehlasovalCount,
+      payload.nepritomnyCount,
+      payload.neplatnychHlasovCount,
+      payload.sourceUrl,
+    ],
+  );
+
+  return result.rows[0];
 }
 
 export async function listPoliticians(limit = 100) {
@@ -389,4 +454,62 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
   } finally {
     client.release();
   }
+}
+
+function quoteIdentifier(identifier) {
+  if (!/^[a-z_][a-z0-9_]*$/i.test(identifier)) {
+    throw new Error("Invalid table name");
+  }
+
+  return `"${identifier}"`;
+}
+
+export async function listDatabaseTables() {
+  const result = await pool.query(
+    `
+      SELECT
+        t.table_name,
+        COALESCE(s.n_live_tup::BIGINT, 0) AS estimated_rows
+      FROM information_schema.tables t
+      LEFT JOIN pg_stat_user_tables s ON s.relname = t.table_name
+      WHERE t.table_schema = 'public'
+        AND t.table_type = 'BASE TABLE'
+      ORDER BY t.table_name ASC
+    `,
+  );
+
+  return result.rows;
+}
+
+export async function getTableData(tableName, limit = 100, offset = 0) {
+  const tables = await listDatabaseTables();
+  const allowedNames = new Set(tables.map((table) => table.table_name));
+
+  if (!allowedNames.has(tableName)) {
+    throw new Error("Unknown table");
+  }
+
+  const safeTableName = quoteIdentifier(tableName);
+  const columnsResult = await pool.query(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = $1
+      ORDER BY ordinal_position ASC
+    `,
+    [tableName],
+  );
+
+  const countResult = await pool.query(`SELECT COUNT(*)::BIGINT AS total_count FROM ${safeTableName}`);
+  const rowsResult = await pool.query(
+    `SELECT * FROM ${safeTableName} ORDER BY 1 DESC LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+
+  return {
+    tableName,
+    columns: columnsResult.rows.map((row) => row.column_name),
+    totalCount: Number(countResult.rows[0]?.total_count || 0),
+    rows: rowsResult.rows,
+  };
 }
