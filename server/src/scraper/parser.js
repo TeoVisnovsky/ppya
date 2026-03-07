@@ -84,6 +84,110 @@ function parseIncomeFields(incomeText) {
   };
 }
 
+function parseRealEstateItem(itemText) {
+  if (!itemText) {
+    return {
+      realEstateType: null,
+      cadastralArea: null,
+      landRegisterNumber: null,
+      proportion: null,
+    };
+  }
+
+  const parts = itemText.split(';').map((part) => cleanText(part));
+
+  let realEstateType = null;
+  let cadastralArea = null;
+  let landRegisterNumber = null;
+  let proportion = null;
+
+  // Extract type (first part)
+  if (parts.length >= 1) {
+    realEstateType = parts[0];
+  }
+
+  // Extract cadastral area (second part, remove "kat. územie" prefix)
+  if (parts.length >= 2) {
+    cadastralArea = parts[1].replace(/^kat\.\s+územie\s+/i, '').trim();
+  }
+
+  // Extract land register number (third part, remove "číslo LV:" prefix)
+  if (parts.length >= 3) {
+    landRegisterNumber = parts[2].replace(/^číslo\s+LV:\s*/i, '').trim();
+  }
+
+  // Extract proportion (fourth part, remove "podiel:" prefix)
+  if (parts.length >= 4) {
+    proportion = parts[3].replace(/^podiel:\s*/i, '').trim();
+  }
+
+  return {
+    realEstateType,
+    cadastralArea,
+    landRegisterNumber,
+    proportion,
+  };
+}
+
+function parseMovableAssetItem(itemText) {
+  if (!itemText) {
+    return {
+      assetType: null,
+      brandOrMaker: null,
+      yearOfManufacture: null,
+    };
+  }
+
+  let assetType = null;
+  let brandOrMaker = null;
+  let yearOfManufacture = null;
+
+  // Extract asset type (everything before first comma)
+  const firstCommaIndex = itemText.indexOf(',');
+  if (firstCommaIndex !== -1) {
+    assetType = cleanText(itemText.substring(0, firstCommaIndex));
+  } else {
+    assetType = cleanText(itemText);
+  }
+
+  // Extract brand/maker (after "značka:" - search case-insensitively)
+  const brandMatch = itemText.match(/značka:\s*([^,]+)/i);
+  if (brandMatch) {
+    brandOrMaker = cleanText(brandMatch[1]);
+    // If text contains "rok", trim at that point
+    const rokIndex = brandOrMaker.toLowerCase().indexOf('rok');
+    if (rokIndex !== -1) {
+      brandOrMaker = cleanText(brandOrMaker.substring(0, rokIndex));
+    }
+  }
+
+  // Extract year after "vyroby:" - extract all digits starting from position after colon
+  const vyrobPos = itemText.toLowerCase().indexOf('vyroby:');
+  if (vyrobPos !== -1) {
+    const afterVyroby = itemText.substring(vyrobPos + 7).trim();
+    // Extract the first sequence of consecutive digits
+    const digitMatch = afterVyroby.match(/^(\d+)/);
+    if (digitMatch) {
+      let digits = digitMatch[1];
+      // Take first 4 digits if we have more
+      if (digits.length >= 4) {
+        digits = digits.substring(0, 4);
+        const year = parseInt(digits, 10);
+        // Validate year is in reasonable range (1900-2030)
+        if (year >= 1900 && year <= 2030) {
+          yearOfManufacture = year;
+        }
+      }
+    }
+  }
+
+  return {
+    assetType,
+    brandOrMaker,
+    yearOfManufacture,
+  };
+}
+
 function splitCompoundLine(line) {
   const splitByShare = line
     .split(RECORD_BOUNDARY_AFTER_SHARE)
@@ -354,6 +458,18 @@ export function parseDeclarationHtml({ html, sourceUrl, userId, fallbackName }) 
   const incomeText = findRowValue(rowsByLabel, "incomeText").join(" | ") || null;
   const incomeFields = parseIncomeFields(incomeText);
 
+  // Parse real estate items to extract structured data
+  const realEstateItems = findRowValue(rowsByLabel, "realEstate");
+  const parsedRealEstate = realEstateItems.map((item) => parseRealEstateItem(item));
+
+  // Parse movable asset items to extract structured data
+  const movableAssetItems = findRowValue(rowsByLabel, "movableAssets");
+  const parsedMovableAssets = movableAssetItems.map((item) => parseMovableAssetItem(item));
+
+  // Parse usage movable asset items to extract structured data
+  const usageMovableAssetItems = findRowValue(rowsByLabel, "usageMovableAssets");
+  const parsedUsageMovableAssets = usageMovableAssetItems.map((item) => parseMovableAssetItem(item));
+
   const declaration = {
     userId,
     sourceUrl,
@@ -372,12 +488,15 @@ export function parseDeclarationHtml({ html, sourceUrl, userId, fallbackName }) 
       employment: findRowValue(rowsByLabel, "employment"),
       businessActivities: findRowValue(rowsByLabel, "businessActivities"),
       publicFunctionsDuringTerm: findRowValue(rowsByLabel, "publicFunctionsDuringTerm"),
-      realEstate: findRowValue(rowsByLabel, "realEstate"),
-      movableAssets: findRowValue(rowsByLabel, "movableAssets"),
+      realEstate: realEstateItems,
+      parsedRealEstate: parsedRealEstate,
+      movableAssets: movableAssetItems,
+      parsedMovableAssets: parsedMovableAssets,
       propertyRights: findRowValue(rowsByLabel, "propertyRights"),
       liabilities: findRowValue(rowsByLabel, "liabilities"),
       usageRealEstate: findRowValue(rowsByLabel, "usageRealEstate"),
-      usageMovableAssets: findRowValue(rowsByLabel, "usageMovableAssets"),
+      usageMovableAssets: usageMovableAssetItems,
+      parsedUsageMovableAssets: parsedUsageMovableAssets,
       giftsOrBenefits: findRowValue(rowsByLabel, "giftsOrBenefits"),
       voting: findRowValue(rowsByLabel, "voting"),
     },
@@ -389,3 +508,5 @@ export function parseDeclarationHtml({ html, sourceUrl, userId, fallbackName }) 
 
   return declaration;
 }
+
+export { parseRealEstateItem, parseMovableAssetItem };

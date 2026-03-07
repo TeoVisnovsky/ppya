@@ -155,6 +155,122 @@ async function replaceCategoryItems(client, tableName, declarationId, items) {
   }
 }
 
+async function replaceRealEstateItems(client, declarationId, items, parsedItems) {
+  await client.query(`DELETE FROM declaration_real_estate WHERE declaration_id = $1`, [declarationId]);
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const cleaned = item.trim();
+    if (!cleaned) {
+      continue;
+    }
+
+    const parsed = parsedItems && parsedItems[i] ? parsedItems[i] : {};
+
+    await client.query(
+      `
+        INSERT INTO declaration_real_estate (
+          declaration_id,
+          item_text,
+          item_hash,
+          real_estate_type,
+          cadastral_area,
+          land_register_number,
+          proportion
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (declaration_id, item_hash)
+        DO NOTHING
+      `,
+      [
+        declarationId,
+        cleaned,
+        stableHash(cleaned),
+        parsed.realEstateType || null,
+        parsed.cadastralArea || null,
+        parsed.landRegisterNumber || null,
+        parsed.proportion || null,
+      ],
+    );
+  }
+}
+
+async function replaceMovableAssetItems(client, declarationId, items, parsedItems) {
+  await client.query(`DELETE FROM declaration_movable_assets WHERE declaration_id = $1`, [declarationId]);
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const cleaned = item.trim();
+    if (!cleaned) {
+      continue;
+    }
+
+    const parsed = parsedItems && parsedItems[i] ? parsedItems[i] : {};
+
+    await client.query(
+      `
+        INSERT INTO declaration_movable_assets (
+          declaration_id,
+          item_text,
+          item_hash,
+          asset_type,
+          brand_or_maker,
+          year_of_manufacture
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (declaration_id, item_hash)
+        DO NOTHING
+      `,
+      [
+        declarationId,
+        cleaned,
+        stableHash(cleaned),
+        parsed.assetType || null,
+        parsed.brandOrMaker || null,
+        parsed.yearOfManufacture || null,
+      ],
+    );
+  }
+}
+
+async function replaceUsageMovableAssetItems(client, declarationId, items, parsedItems) {
+  await client.query(`DELETE FROM declaration_usage_movable_assets WHERE declaration_id = $1`, [declarationId]);
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const cleaned = item.trim();
+    if (!cleaned) {
+      continue;
+    }
+
+    const parsed = parsedItems && parsedItems[i] ? parsedItems[i] : {};
+
+    await client.query(
+      `
+        INSERT INTO declaration_usage_movable_assets (
+          declaration_id,
+          item_text,
+          item_hash,
+          asset_type,
+          brand_or_maker,
+          year_of_manufacture
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (declaration_id, item_hash)
+        DO NOTHING
+      `,
+      [
+        declarationId,
+        cleaned,
+        stableHash(cleaned),
+        parsed.assetType || null,
+        parsed.brandOrMaker || null,
+        parsed.yearOfManufacture || null,
+      ],
+    );
+  }
+}
+
 export async function saveDeclaration(payload, dbPool = pool) {
   const client = await dbPool.connect();
   try {
@@ -177,8 +293,31 @@ export async function saveDeclaration(payload, dbPool = pool) {
     );
 
     for (const [key, tableName] of Object.entries(CATEGORY_TABLES)) {
-      const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
-      await replaceCategoryItems(client, tableName, declarationId, items);
+      if (key === "realEstate") {
+        // Handle real estate separately with parsed fields
+        const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
+        const parsedItems = Array.isArray(payload.categories.parsedRealEstate)
+          ? payload.categories.parsedRealEstate
+          : [];
+        await replaceRealEstateItems(client, declarationId, items, parsedItems);
+      } else if (key === "movableAssets") {
+        // Handle movable assets separately with parsed fields
+        const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
+        const parsedItems = Array.isArray(payload.categories.parsedMovableAssets)
+          ? payload.categories.parsedMovableAssets
+          : [];
+        await replaceMovableAssetItems(client, declarationId, items, parsedItems);
+      } else if (key === "usageMovableAssets") {
+        // Handle usage movable assets separately with parsed fields
+        const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
+        const parsedItems = Array.isArray(payload.categories.parsedUsageMovableAssets)
+          ? payload.categories.parsedUsageMovableAssets
+          : [];
+        await replaceUsageMovableAssetItems(client, declarationId, items, parsedItems);
+      } else {
+        const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
+        await replaceCategoryItems(client, tableName, declarationId, items);
+      }
     }
 
     await client.query("COMMIT");
