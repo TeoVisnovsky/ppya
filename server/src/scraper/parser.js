@@ -207,6 +207,55 @@ const VOTING_SUMMARY_LABELS = {
   "neplatných hlasov": "neplatnychHlasovCount",
 };
 
+function getAbsoluteUrl(sourceUrl, href) {
+  if (!href) {
+    return null;
+  }
+
+  return new URL(href, sourceUrl).toString();
+}
+
+function parsePostBackHref(value) {
+  const match = String(value || "").match(/__doPostBack\('([^']+)','([^']+)'\)/);
+  if (!match) {
+    return null;
+  }
+
+  const pageMatch = match[2].match(/^Page\$(\d+)$/);
+
+  return {
+    eventTarget: match[1],
+    eventArgument: match[2],
+    pageNumber: pageMatch ? Number(pageMatch[1]) : null,
+  };
+}
+
+function parseVotingResultRow($, row, sourceUrl) {
+  const cells = $(row).children("td");
+  if (cells.length < 6) {
+    return null;
+  }
+
+  const detailAnchor = $(cells[2]).find("a").first();
+  const detailUrl = getAbsoluteUrl(sourceUrl, detailAnchor.attr("href"));
+  const detailVoteId = detailUrl ? Number(new URL(detailUrl).searchParams.get("ID")) : null;
+  const cptAnchor = $(cells[3]).find("a").first();
+  const cptUrl = getAbsoluteUrl(sourceUrl, cptAnchor.attr("href"));
+
+  return {
+    schodzaNumber: cleanText($(cells[0]).text()) || null,
+    voteDateText: getCellLines($, cells[1]).join(" ") || null,
+    detailVoteId: Number.isFinite(detailVoteId) ? detailVoteId : null,
+    voteNumber: cleanText($(cells[2]).text()) || null,
+    cptText: cleanText($(cells[3]).text()) || null,
+    voteTitle: cleanText($(cells[4]).text()) || "Bez názvu",
+    votedAs: cleanText($(cells[5]).text()) || null,
+    detailUrl,
+    cptUrl,
+    rowHtml: $.html(row) || "",
+  };
+}
+
 export function parseVotingSummaryHtml({ html, sourceUrl, cisObdobia, poslanecMasterId }) {
   const $ = cheerio.load(html);
   const headingText = cleanText($("h1").first().text()) || cleanText($("title").text());
@@ -246,6 +295,47 @@ export function parseVotingSummaryHtml({ html, sourceUrl, cisObdobia, poslanecMa
     politicianName,
     sourceUrl,
     ...summary,
+  };
+}
+
+export function parseVotingResultsHtml({ html, sourceUrl, cisObdobia, cisSchodze, poslanecMasterId, pageNumber }) {
+  const $ = cheerio.load(html);
+  const headingText = cleanText($("h1").first().text()) || cleanText($("title").text());
+  const politicianName = extractVotingPoliticianName(headingText);
+  const table = $("#_sectionLayoutContainer_ctl01__resultGrid2").first();
+
+  if (!politicianName || table.length === 0) {
+    return null;
+  }
+
+  const rows = [];
+  table.find("tr.tab_zoznam_nonalt, tr.tab_zoznam_alt").each((_, row) => {
+    const parsedRow = parseVotingResultRow($, row, sourceUrl);
+    if (parsedRow) {
+      rows.push(parsedRow);
+    }
+  });
+
+  const pager = [];
+  table.find("tr.pager a[href*='__doPostBack']").each((_, link) => {
+    const parsed = parsePostBackHref($(link).attr("href"));
+    if (parsed) {
+      pager.push(parsed);
+    }
+  });
+
+  return {
+    cisObdobia,
+    cisSchodze,
+    poslanecMasterId,
+    politicianName,
+    pageNumber,
+    sourceUrl,
+    resultTableHtml: $.html(table) || "",
+    rawPageHtml: html,
+    summary: parseVotingSummaryHtml({ html, sourceUrl, cisObdobia, poslanecMasterId }),
+    pager,
+    rows,
   };
 }
 

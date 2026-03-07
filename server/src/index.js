@@ -8,6 +8,9 @@ import {
   getTableData,
   listDatabaseTables,
   listDeclarationsByPolitician,
+  listPoliticianVotingRecords,
+  listPoliticianVotingStats,
+  listPoliticianVotingTranscripts,
   listPoliticians,
 } from "./db/repositories.js";
 import { runScrape } from "./scraper/nrsrScraper.js";
@@ -71,15 +74,19 @@ app.post("/api/scrape/voting", async (req, res) => {
   try {
     const queryMaxPoliticianMasterId = req.query.maxPoliticianMasterId;
     const bodyMaxPoliticianMasterId = req.body?.maxPoliticianMasterId;
-    const queryMaxPeriod = req.query.maxPeriod;
-    const bodyMaxPeriod = req.body?.maxPeriod;
+    const queryCisObdobia = req.query.cisObdobia;
+    const bodyCisObdobia = req.body?.cisObdobia;
+    const queryCisSchodze = req.query.cisSchodze;
+    const bodyCisSchodze = req.body?.cisSchodze;
 
     const maxPoliticianMasterId = Number(queryMaxPoliticianMasterId ?? bodyMaxPoliticianMasterId);
-    const maxPeriod = Number(queryMaxPeriod ?? bodyMaxPeriod);
+    const cisObdobia = Number(queryCisObdobia ?? bodyCisObdobia);
+    const cisSchodze = Number(queryCisSchodze ?? bodyCisSchodze);
 
     const result = await runVotingScrape({
       maxPoliticianMasterId: Number.isFinite(maxPoliticianMasterId) ? maxPoliticianMasterId : undefined,
-      maxPeriod: Number.isFinite(maxPeriod) ? maxPeriod : undefined,
+      cisObdobia: Number.isFinite(cisObdobia) ? cisObdobia : undefined,
+      cisSchodze: Number.isFinite(cisSchodze) ? cisSchodze : undefined,
     });
 
     res.json({ ok: true, result });
@@ -92,6 +99,36 @@ app.get("/api/politicians", async (req, res) => {
   try {
     const limit = Number(req.query.limit || 100);
     const rows = await listPoliticians(limit);
+    res.json({ ok: true, rows });
+  } catch (error) {
+    res.status(getErrorStatus(error)).json({ ok: false, error: getErrorMessage(error) });
+  }
+});
+
+app.get("/api/voting-stats", async (req, res) => {
+  try {
+    const limit = Number(req.query.limit || 5000);
+    const rows = await listPoliticianVotingStats(limit);
+    res.json({ ok: true, rows });
+  } catch (error) {
+    res.status(getErrorStatus(error)).json({ ok: false, error: getErrorMessage(error) });
+  }
+});
+
+app.get("/api/voting-records", async (req, res) => {
+  try {
+    const limit = Number(req.query.limit || 5000);
+    const rows = await listPoliticianVotingRecords(limit);
+    res.json({ ok: true, rows });
+  } catch (error) {
+    res.status(getErrorStatus(error)).json({ ok: false, error: getErrorMessage(error) });
+  }
+});
+
+app.get("/api/voting-transcripts", async (req, res) => {
+  try {
+    const limit = Number(req.query.limit || 5000);
+    const rows = await listPoliticianVotingTranscripts(limit);
     res.json({ ok: true, rows });
   } catch (error) {
     res.status(getErrorStatus(error)).json({ ok: false, error: getErrorMessage(error) });
@@ -170,6 +207,10 @@ app.get("*", (req, res, next) => {
 
   if (req.path === "/admin" || req.path === "/admin.html") {
     return res.sendFile(path.join(clientDir, "admin.html"));
+  }
+
+  if (req.path === "/voting" || req.path === "/voting.html") {
+    return res.sendFile(path.join(clientDir, "voting.html"));
   }
 
   return res.sendFile(path.join(clientDir, "index.html"));

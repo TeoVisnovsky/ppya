@@ -256,6 +256,222 @@ export async function savePoliticianVotingStats(payload, dbPool = pool) {
   return result.rows[0];
 }
 
+async function upsertPoliticianVotingPageSnapshot(client, payload) {
+  const result = await client.query(
+    `
+      INSERT INTO politician_voting_page_snapshots (
+        politician_id,
+        cis_obdobia,
+        cis_schodze,
+        poslanec_master_id,
+        source_politician_name,
+        page_number,
+        source_url,
+        result_table_html,
+        raw_page_html,
+        scraped_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+      ON CONFLICT (cis_obdobia, cis_schodze, poslanec_master_id, page_number)
+      DO UPDATE SET
+        politician_id = EXCLUDED.politician_id,
+        source_politician_name = EXCLUDED.source_politician_name,
+        source_url = EXCLUDED.source_url,
+        result_table_html = EXCLUDED.result_table_html,
+        raw_page_html = EXCLUDED.raw_page_html,
+        scraped_at = NOW(),
+        updated_at = NOW()
+      RETURNING id
+    `,
+    [
+      payload.politicianId,
+      payload.cisObdobia,
+      payload.cisSchodze,
+      payload.poslanecMasterId,
+      payload.sourcePoliticianName,
+      payload.pageNumber,
+      payload.sourceUrl,
+      payload.resultTableHtml,
+      payload.rawPageHtml,
+    ],
+  );
+
+  return result.rows[0].id;
+}
+
+export async function savePoliticianVotingPage(payload, dbPool = pool) {
+  const client = await dbPool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const snapshotId = await upsertPoliticianVotingPageSnapshot(client, payload);
+
+    await client.query(
+      `DELETE FROM politician_voting_records WHERE page_snapshot_id = $1`,
+      [snapshotId],
+    );
+
+    for (const row of payload.rows) {
+      const rowHash = stableHash(
+        [
+          row.detailVoteId || "",
+          row.voteNumber || "",
+          row.schodzaNumber || "",
+          row.voteDateText || "",
+          row.cptText || "",
+          row.voteTitle || "",
+          row.votedAs || "",
+        ].join("|"),
+      );
+
+      await client.query(
+        `
+          INSERT INTO politician_voting_records (
+            politician_id,
+            page_snapshot_id,
+            cis_obdobia,
+            cis_schodze,
+            poslanec_master_id,
+            source_politician_name,
+            page_number,
+            schodza_number,
+            vote_date_text,
+            detail_vote_id,
+            vote_number,
+            cpt_text,
+            vote_title,
+            voted_as,
+            detail_url,
+            cpt_url,
+            row_hash,
+            row_html,
+            scraped_at,
+            updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW())
+          ON CONFLICT (page_snapshot_id, row_hash)
+          DO UPDATE SET
+            politician_id = EXCLUDED.politician_id,
+            schodza_number = EXCLUDED.schodza_number,
+            vote_date_text = EXCLUDED.vote_date_text,
+            detail_vote_id = EXCLUDED.detail_vote_id,
+            vote_number = EXCLUDED.vote_number,
+            cpt_text = EXCLUDED.cpt_text,
+            vote_title = EXCLUDED.vote_title,
+            voted_as = EXCLUDED.voted_as,
+            detail_url = EXCLUDED.detail_url,
+            cpt_url = EXCLUDED.cpt_url,
+            row_html = EXCLUDED.row_html,
+            scraped_at = NOW(),
+            updated_at = NOW()
+        `,
+        [
+          payload.politicianId,
+          snapshotId,
+          payload.cisObdobia,
+          payload.cisSchodze,
+          payload.poslanecMasterId,
+          payload.sourcePoliticianName,
+          payload.pageNumber,
+          row.schodzaNumber || null,
+          row.voteDateText || null,
+          row.detailVoteId ?? null,
+          row.voteNumber || null,
+          row.cptText || null,
+          row.voteTitle,
+          row.votedAs || null,
+          row.detailUrl || null,
+          row.cptUrl || null,
+          rowHash,
+          row.rowHtml,
+        ],
+      );
+    }
+
+    await client.query("COMMIT");
+    return {
+      snapshotId,
+      rowCount: payload.rows.length,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function savePoliticianVotingTranscript(payload, dbPool = pool) {
+  const result = await dbPool.query(
+    `
+      INSERT INTO politician_voting_transcripts (
+        politician_id,
+        cis_obdobia,
+        cis_schodze,
+        poslanec_master_id,
+        source_politician_name,
+        source_url,
+        page_count,
+        record_count,
+        za_count,
+        proti_count,
+        zdrzal_sa_count,
+        nehlasoval_count,
+        nepritomny_count,
+        neplatnych_hlasov_count,
+        transcript_text,
+        transcript_records,
+        raw_pages,
+        scraped_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, $17::jsonb, NOW(), NOW())
+      ON CONFLICT (cis_obdobia, cis_schodze, poslanec_master_id)
+      DO UPDATE SET
+        politician_id = EXCLUDED.politician_id,
+        source_politician_name = EXCLUDED.source_politician_name,
+        source_url = EXCLUDED.source_url,
+        page_count = EXCLUDED.page_count,
+        record_count = EXCLUDED.record_count,
+        za_count = EXCLUDED.za_count,
+        proti_count = EXCLUDED.proti_count,
+        zdrzal_sa_count = EXCLUDED.zdrzal_sa_count,
+        nehlasoval_count = EXCLUDED.nehlasoval_count,
+        nepritomny_count = EXCLUDED.nepritomny_count,
+        neplatnych_hlasov_count = EXCLUDED.neplatnych_hlasov_count,
+        transcript_text = EXCLUDED.transcript_text,
+        transcript_records = EXCLUDED.transcript_records,
+        raw_pages = EXCLUDED.raw_pages,
+        scraped_at = NOW(),
+        updated_at = NOW()
+      RETURNING id
+    `,
+    [
+      payload.politicianId,
+      payload.cisObdobia,
+      payload.cisSchodze,
+      payload.poslanecMasterId,
+      payload.sourcePoliticianName,
+      payload.sourceUrl,
+      payload.pageCount,
+      payload.recordCount,
+      payload.zaCount,
+      payload.protiCount,
+      payload.zdrzalSaCount,
+      payload.nehlasovalCount,
+      payload.nepritomnyCount,
+      payload.neplatnychHlasovCount,
+      payload.transcriptText,
+      JSON.stringify(payload.transcriptRecords || []),
+      JSON.stringify(payload.rawPages || []),
+    ],
+  );
+
+  return result.rows[0];
+}
+
 export async function listPoliticians(limit = 100) {
   const result = await pool.query(
     `
@@ -303,6 +519,103 @@ export async function listPoliticians(limit = 100) {
     `,
     [limit],
   );
+  return result.rows;
+}
+
+export async function listPoliticianVotingStats(limit = 5000) {
+  const result = await pool.query(
+    `
+      SELECT
+        pvs.id,
+        pvs.politician_id,
+        p.full_name,
+        p.nrsr_user_id,
+        pvs.cis_obdobia,
+        pvs.poslanec_master_id,
+        pvs.za_count,
+        pvs.proti_count,
+        pvs.zdrzal_sa_count,
+        pvs.nehlasoval_count,
+        pvs.nepritomny_count,
+        pvs.neplatnych_hlasov_count,
+        pvs.source_url,
+        pvs.scraped_at
+      FROM politician_voting_stats pvs
+      JOIN politicians p ON p.id = pvs.politician_id
+      ORDER BY pvs.cis_obdobia DESC, p.full_name ASC, pvs.id DESC
+      LIMIT $1
+    `,
+    [limit],
+  );
+
+  return result.rows;
+}
+
+export async function listPoliticianVotingRecords(limit = 5000) {
+  const result = await pool.query(
+    `
+      SELECT
+        pvr.id,
+        pvr.politician_id,
+        COALESCE(p.full_name, pvr.source_politician_name) AS full_name,
+        p.nrsr_user_id,
+        pvr.cis_obdobia,
+        pvr.cis_schodze,
+        pvr.poslanec_master_id,
+        pvr.page_number,
+        pvr.schodza_number,
+        pvr.vote_date_text,
+        pvr.detail_vote_id,
+        pvr.vote_number,
+        pvr.cpt_text,
+        pvr.vote_title,
+        pvr.voted_as,
+        pvr.detail_url,
+        pvr.cpt_url,
+        pvr.scraped_at
+      FROM politician_voting_records pvr
+      LEFT JOIN politicians p ON p.id = pvr.politician_id
+      ORDER BY full_name ASC, pvr.page_number ASC, pvr.detail_vote_id ASC NULLS LAST, pvr.id ASC
+      LIMIT $1
+    `,
+    [limit],
+  );
+
+  return result.rows;
+}
+
+export async function listPoliticianVotingTranscripts(limit = 5000) {
+  const result = await pool.query(
+    `
+      SELECT
+        pvt.id,
+        pvt.politician_id,
+        COALESCE(p.full_name, pvt.source_politician_name) AS full_name,
+        p.nrsr_user_id,
+        pvt.cis_obdobia,
+        pvt.cis_schodze,
+        pvt.poslanec_master_id,
+        pvt.page_count,
+        pvt.record_count,
+        pvt.za_count,
+        pvt.proti_count,
+        pvt.zdrzal_sa_count,
+        pvt.nehlasoval_count,
+        pvt.nepritomny_count,
+        pvt.neplatnych_hlasov_count,
+        pvt.transcript_text,
+        pvt.transcript_records,
+        pvt.raw_pages,
+        pvt.source_url,
+        pvt.scraped_at
+      FROM politician_voting_transcripts pvt
+      LEFT JOIN politicians p ON p.id = pvt.politician_id
+      ORDER BY full_name ASC, pvt.cis_obdobia DESC, pvt.poslanec_master_id ASC
+      LIMIT $1
+    `,
+    [limit],
+  );
+
   return result.rows;
 }
 

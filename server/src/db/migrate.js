@@ -6,13 +6,13 @@ import { pool } from "./pool.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function runMigrations() {
+async function runMigrationsForPool(dbPool = pool) {
   const migrationsDir = path.resolve(__dirname, "../../../database/migrations");
   const files = (await fs.readdir(migrationsDir))
     .filter((name) => name.endsWith(".sql"))
     .sort();
 
-  const client = await pool.connect();
+  const client = await dbPool.connect();
   try {
     for (const file of files) {
       const fullPath = path.join(migrationsDir, file);
@@ -30,6 +30,10 @@ async function runMigrations() {
   }
 }
 
+async function runMigrations() {
+  await runMigrationsForPool(pool);
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   runMigrations()
     .then(() => {
@@ -43,4 +47,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
     });
 }
 
-export { runMigrations };
+export { runMigrations, runMigrationsForPool };

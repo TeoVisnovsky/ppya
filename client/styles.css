@@ -290,6 +290,14 @@ tbody tr:hover {
   cursor: not-allowed;
 }
 
+.transcript-cell {
+  max-height: 220px;
+  min-width: 420px;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
 .error-box {
   padding: 18px;
   border: 1px solid rgba(220, 38, 38, 0.18);
