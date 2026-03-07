@@ -1,0 +1,274 @@
+:root {
+  --bg: #f3efe6;
+  --panel: rgba(255, 252, 246, 0.88);
+  --panel-strong: #fffdf8;
+  --ink: #1e1d1a;
+  --muted: #6a655d;
+  --line: rgba(41, 35, 24, 0.12);
+  --accent: #0f766e;
+  --accent-soft: rgba(15, 118, 110, 0.12);
+  --shadow: 0 24px 70px rgba(35, 27, 14, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.18), transparent 30%),
+    radial-gradient(circle at left center, rgba(190, 24, 93, 0.08), transparent 26%),
+    linear-gradient(180deg, #efe6d5 0%, var(--bg) 32%, #ece7dc 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: 0.35;
+}
+
+.page-shell {
+  position: relative;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 28px;
+}
+
+.compact-hero {
+  align-items: center;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.eyebrow a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: clamp(2.3rem, 5vw, 4.4rem);
+  line-height: 0.95;
+  max-width: 10ch;
+}
+
+h2 {
+  font-size: 1.4rem;
+}
+
+.hero-copy,
+.panel-header p,
+#resultsInfo,
+.category-empty {
+  color: var(--muted);
+}
+
+.content-grid,
+.detail-layout {
+  display: grid;
+  gap: 20px;
+}
+
+.content-grid {
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+}
+
+.detail-layout {
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.panel-header {
+  margin-bottom: 18px;
+}
+
+.inline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+
+.filters {
+  display: grid;
+  gap: 16px;
+}
+
+label span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--ink);
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  cursor: pointer;
+}
+
+.ghost-button,
+.table-link {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.table-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.summary-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.summary-list div {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.summary-list dt {
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+.summary-list dd {
+  margin: 0;
+}
+
+.categories-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.category-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.45);
+  padding: 18px;
+}
+
+.category-card h3 {
+  margin-bottom: 12px;
+}
+
+.category-card ul {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.declaration-switcher {
+  min-width: 220px;
+}
+
+.error-box {
+  padding: 18px;
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  border-radius: 18px;
+  background: rgba(254, 242, 242, 0.9);
+  color: #991b1b;
+}
+
+@media (max-width: 960px) {
+  .content-grid,
+  .detail-layout,
+  .hero {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: start;
+  }
+
+  h1 {
+    max-width: none;
+  }
+
+  .page-shell {
+    padding: 24px 16px 48px;
+  }
+}

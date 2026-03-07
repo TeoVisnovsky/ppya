@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="sk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PPYA | Politicians</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">PPYA</p>
+          <h1>Majetkove priznania politikov</h1>
+          <p class="hero-copy">
+            Prehlad politikov, poslednych priznani a rychly vstup do detailu majetku.
+          </p>
+        </div>
+      </header>
+
+      <main class="content-grid">
+        <section class="panel filters-panel">
+          <div class="panel-header">
+            <h2>Vyhladavanie</h2>
+            <p>Filtruj podla mena, funkcie a roku priznania.</p>
+          </div>
+          <div class="filters">
+            <label>
+              <span>Meno alebo UserId</span>
+              <input id="searchInput" type="search" placeholder="napr. Kacmar" />
+            </label>
+            <label>
+              <span>Funkcia</span>
+              <input id="functionInput" type="search" placeholder="napr. poslanec" />
+            </label>
+            <label>
+              <span>Rok</span>
+              <select id="yearSelect">
+                <option value="">Vsetky roky</option>
+              </select>
+            </label>
+            <label>
+              <span>Zoradenie</span>
+              <select id="sortSelect">
+                <option value="firstNameAsc">Abecedne podla mena</option>
+                <option value="surnameAsc">Abecedne podla priezviska</option>
+                <option value="firstNameDesc">Obratene abecedne podla mena</option>
+                <option value="surnameDesc">Obratene abecedne podla priezviska</option>
+                <option value="wealthDesc">Velkost majetku od najvacsieho</option>
+                <option value="wealthAsc">Velkost majetku od najmensieho</option>
+                <option value="incomeDesc">Prijmy od najvyssich</option>
+                <option value="incomeAsc">Prijmy od najnizsich</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-header inline-header">
+            <div>
+              <h2>Zoznam politikov</h2>
+              <p id="resultsInfo">Nacitavam data...</p>
+            </div>
+            <button id="reloadButton" class="ghost-button" type="button">Obnovit</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Meno</th>
+                  <th>UserId</th>
+                  <th>Posledny rok</th>
+                  <th>Funkcia</th>
+                  <th>Prijmy</th>
+                  <th>Velkost majetku</th>
+                  <th>Pocet priznani</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody id="politiciansTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

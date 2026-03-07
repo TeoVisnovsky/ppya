@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="sk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PPYA | Detail</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell detail-shell">
+      <header class="hero compact-hero">
+        <div>
+          <p class="eyebrow"><a href="/">Spat na zoznam</a></p>
+          <h1 id="detailTitle">Detail politika</h1>
+          <p id="detailSubtitle" class="hero-copy">Nacitavam detail priznania...</p>
+        </div>
+        <div class="declaration-switcher">
+          <label>
+            <span>Vyber priznanie</span>
+            <select id="declarationSelect"></select>
+          </label>
+        </div>
+      </header>
+
+      <main class="detail-layout">
+        <section class="panel summary-panel">
+          <div class="panel-header">
+            <h2>Zakladne info</h2>
+          </div>
+          <dl id="summaryList" class="summary-list"></dl>
+        </section>
+
+        <section class="panel categories-panel">
+          <div class="panel-header">
+            <h2>Kategorie</h2>
+          </div>
+          <div id="categoriesContainer" class="categories-grid"></div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/detail.js"></script>
+  </body>
+</html>
