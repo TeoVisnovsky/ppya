@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sk">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,82 +12,107 @@
     />
     <link rel="stylesheet" href="/chatbot.css" />
   </head>
-  <body>
-    <div class="chatbot-page">
-      <div class="aurora aurora-a" aria-hidden="true"></div>
-      <div class="aurora aurora-b" aria-hidden="true"></div>
+  <body class="landing-page chatbot-page">
+    <svg class="goo-filter" aria-hidden="true" width="0" height="0" focusable="false">
+      <filter id="gooey-metaballs">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="26" result="blur" />
+        <feColorMatrix
+          in="blur"
+          mode="matrix"
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"
+          result="goo"
+        />
+        <feBlend in="SourceGraphic" in2="goo" />
+      </filter>
+    </svg>
 
-      <div class="chatbot-shell">
-        <header class="chatbot-hero">
-          <div>
-            <p class="eyebrow"><a href="/">Back to dataset</a></p>
-            <h1>Ask the database instead of digging through it.</h1>
-            <p class="hero-copy">
-              This assistant answers only from stored politician data across declarations, jobs, gifts, liabilities, voting, and profile fields.
-            </p>
+    <div class="metaball-scene" aria-hidden="true">
+      <div class="metaball-cluster">
+        <span class="metaball metaball-1"></span>
+        <span class="metaball metaball-2"></span>
+        <span class="metaball metaball-3"></span>
+        <span class="metaball metaball-4"></span>
+        <span class="metaball metaball-5"></span>
+      </div>
+      <div class="ambient-haze ambient-haze-1"></div>
+      <div class="ambient-haze ambient-haze-2"></div>
+    </div>
+
+    <div class="page-shell page-shell--landing chatbot-shell">
+      <header class="hero compact-hero chatbot-hero">
+        <div class="hero-copy-block">
+          <p class="eyebrow"><a href="/">Spat na zoznam</a></p>
+          <h1>Database assistant</h1>
+          <p class="hero-copy">
+            Opytaj sa prirodzenym jazykom a chatbot vrati odpoved iba z databazy,
+            plus tabulku vsetkych zhôd, ktoru vies exportovat do CSV.
+          </p>
+        </div>
+        <div class="chatbot-info panel panel-soft">
+          <p class="hero-stat-label">Co vie</p>
+          <p class="hero-stat-value">Natural-language filtrovanie nad celou DB</p>
+          <p class="hero-stat-copy">Majetok, prijmy, zavazky, dary, profily, hlasovania, rok, strana/klub a kombinovane kriterium.</p>
+        </div>
+      </header>
+
+      <main class="chatbot-grid">
+        <section class="panel chatbot-window chat-window">
+          <div class="panel-header panel-header-row">
+            <div>
+              <h2>Konverzacia</h2>
+              <p id="statusText">Pripravene na dotaz nad databazou.</p>
+            </div>
           </div>
 
-          <aside class="hero-panel">
-            <span class="panel-kicker">What it can do</span>
-            <ul class="hero-points">
-              <li>Rank politicians by assets, income, or risk</li>
-              <li>Filter answers by party, club, or year</li>
-              <li>Identify the relevant tables for natural-language database queries</li>
-              <li>Show result tables you can export as CSV</li>
-            </ul>
-          </aside>
-        </header>
+          <div id="suggestionBar" class="suggestion-bar" aria-label="Navrhnute dotazy">
+            <button class="suggestion-chip" type="button" data-prompt="Kto ma najviac majetkovych poloziek?">Najviac majetku</button>
+            <button class="suggestion-chip" type="button" data-prompt="Daj mi vsetkych politikov, co maju motorku v roku 2024.">Motorky 2024</button>
+            <button class="suggestion-chip" type="button" data-prompt="Kto ma sperky?">Sperky</button>
+            <button class="suggestion-chip" type="button" data-prompt="Kto ma najvyssie prijmy?">Najvyssie prijmy</button>
+            <button class="suggestion-chip" type="button" data-prompt="Kto ma zavazky?">Zavazky</button>
+          </div>
 
-        <main class="chatbot-layout">
-          <section class="chat-column panel">
-            <div class="panel-header panel-header-row">
-              <div>
-                <h2>Conversation</h2>
-                <p id="statusText">Ready for a database-backed question.</p>
-              </div>
+          <div id="conversation" class="conversation" aria-live="polite"></div>
+
+          <form id="chatForm" class="composer">
+            <label class="composer-field" for="chatInput">
+              <span class="sr-only">Otazka pre databazu</span>
+              <textarea
+                id="chatInput"
+                name="message"
+                rows="2"
+                maxlength="500"
+                placeholder="Napr. Daj mi vsetkych politikov, co maju motorku v roku 2024."
+                required
+              ></textarea>
+            </label>
+            <button id="sendButton" class="send-button" type="submit">Odoslat</button>
+          </form>
+        </section>
+
+        <section class="panel chatbot-window best-window">
+          <div class="panel-header">
+            <h2>Najlepsi vysledok</h2>
+            <p>Zhrnutie, karty a suvisiace fakty z poslednej odpovede.</p>
+          </div>
+          <div id="bestSurface" class="best-surface empty-state">
+            Poloz dotaz a tu uvidis zhrnutie odpovede.
+          </div>
+        </section>
+
+        <section class="panel chatbot-window table-window">
+          <div class="panel-header panel-header-row">
+            <div>
+              <h2>Vsetky zhody</h2>
+              <p>Kompletna tabulka zhodnych zaznamov z databazy pre aktualny dotaz.</p>
             </div>
-
-            <div id="suggestionBar" class="suggestion-bar" aria-label="Suggested prompts">
-              <button class="suggestion-chip" type="button" data-prompt="Who has the most assets?">Most assets</button>
-              <button class="suggestion-chip" type="button" data-prompt="Show the top 5 highest-income politicians.">Highest income</button>
-              <button class="suggestion-chip" type="button" data-prompt="Give me all politicians that own motorcycles in 2024.">Motorcycles 2024</button>
-              <button class="suggestion-chip" type="button" data-prompt="Who has liabilities?">Liabilities</button>
-              <button class="suggestion-chip" type="button" data-prompt="Who has a car with brand VOLVO?">VOLVO car</button>
-              <button class="suggestion-chip" type="button" data-prompt="Tell me about Robert Fico.">Profile lookup</button>
-            </div>
-
-            <div id="conversation" class="conversation" aria-live="polite"></div>
-
-            <form id="chatForm" class="composer">
-              <label class="composer-field" for="chatInput">
-                <span class="sr-only">Ask the database</span>
-                <textarea
-                  id="chatInput"
-                  name="message"
-                  rows="1"
-                  maxlength="500"
-                  placeholder="Ask a question like 'Give me all politicians that own motorcycles in 2024.'"
-                  required
-                ></textarea>
-              </label>
-              <button id="sendButton" class="send-button" type="submit">Ask</button>
-            </form>
-          </section>
-
-          <aside class="results-column">
-            <section class="panel insight-panel">
-              <div class="panel-header">
-                <h2>Latest answer</h2>
-                <p>The summary, related facts, and politician cards from the most recent response.</p>
-              </div>
-
-              <div id="answerSurface" class="answer-surface empty-state">
-                Ask a question to populate this panel.
-              </div>
-            </section>
-          </aside>
-        </main>
-      </div>
+            <button id="exportButton" class="table-export-button" type="button">Export CSV</button>
+          </div>
+          <div id="tableSurface" class="table-surface empty-state">
+            Tabulka sa zobrazi po prvom uspesnom dotaze.
+          </div>
+        </section>
+      </main>
     </div>
     <script type="module" src="/chatbot.js"></script>
   </body>

@@ -249,6 +249,47 @@ function stableHash(value) {
   return crypto.createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
 }
 
+function normalizeManualMatchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function getRealEstateEstimatedPriceLabel(itemText, politicianFullName) {
+  const normalizedName = normalizeManualMatchText(politicianFullName);
+  if (!normalizedName.includes("robert kalinak")) {
+    return null;
+  }
+
+  const normalizedItem = normalizeManualMatchText(itemText);
+  const hasLv6227 = normalizedItem.includes("6227");
+  const hasLv8520 = normalizedItem.includes("8520");
+  const hasFlat = normalizedItem.includes("byt");
+  const hasGarage = normalizedItem.includes("garaz");
+  const hasCottage = normalizedItem.includes("chata");
+
+  if (hasCottage) {
+    return "Nie je mozne odhadnut";
+  }
+
+  if (hasLv6227 && hasFlat) {
+    return "801 450 €";
+  }
+
+  if (hasLv8520 && hasFlat) {
+    return "1 410 945 €";
+  }
+
+  if (hasLv8520 && hasGarage) {
+    return "42 767 €";
+  }
+
+  return null;
+}
+
 async function refreshPoliticianRiskFactor(client, politicianId = null) {
   await client.query(POLITICIAN_RISK_FACTOR_UPSERT_SQL, [politicianId]);
 }
@@ -1245,6 +1286,45 @@ export async function searchSearchableRecords({ searchTerms = [], sourceKeys = [
   }
 
   const hasSourceKeys = cleanedSourceKeys.length > 0;
+  const pgTrgmExtensionResult = await pool.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_extension
+        WHERE extname = 'pg_trgm'
+      ) AS enabled
+    `,
+  );
+  const supportsPgTrgm = Boolean(pgTrgmExtensionResult.rows[0]?.enabled);
+  const semanticThreshold = supportsPgTrgm ? 0.24 : 2;
+
+  // Normalize text for accent-insensitive matching directly in SQL.
+  const normalizeSql = (valueSql) => `
+    REGEXP_REPLACE(
+      TRANSLATE(
+        LOWER(COALESCE(${valueSql}, '')),
+        'áäčďéíĺľňóôŕšťúýž',
+        'aacdeillnoorstuyz'
+      ),
+      '[^a-z0-9\\s]+',
+      ' ',
+      'g'
+    )
+  `;
+  const normalizedItemSql = normalizeSql("search_item.item_text");
+  const normalizedTermSql = normalizeSql("term");
+
+  const semanticSimilaritySql = supportsPgTrgm
+    ? `
+          CASE
+            WHEN COALESCE(array_length($1::text[], 1), 0) = 0 THEN 0::NUMERIC
+            ELSE (
+              SELECT COALESCE(MAX(similarity(${normalizedItemSql}, ${normalizedTermSql})), 0)::NUMERIC
+              FROM unnest($1::text[]) term
+            )
+          END AS semantic_similarity
+      `
+    : "0::NUMERIC AS semantic_similarity";
 
   const declarationTextItemsSql = SNAPSHOT_TEXT_SOURCES.map((source) => `
         SELECT
@@ -1326,50 +1406,56 @@ ${profileItemsSql}
           search_item.source_key,
           search_item.source_label,
           search_item.item_text,
+          ${normalizedItemSql} AS normalized_item_text,
           CASE
             WHEN COALESCE(array_length($1::text[], 1), 0) = 0 THEN 0
             ELSE (
               SELECT COUNT(*)::INT
               FROM unnest($1::text[]) term
-              WHERE REGEXP_REPLACE(LOWER(search_item.item_text), '(.)\\1+', '\\1', 'g')
-                LIKE '%' || REGEXP_REPLACE(LOWER(term), '(.)\\1+', '\\1', 'g') || '%'
+              WHERE ${normalizedItemSql}
+                LIKE '%' || ${normalizedTermSql} || '%'
             )
-          END AS term_match_count
+          END AS term_match_count,
+          ${semanticSimilaritySql}
         FROM search_items search_item
         WHERE ($3::BOOLEAN = FALSE OR search_item.source_key = ANY($2::text[]))
           AND ($4::INT IS NULL OR search_item.declaration_year = $4::INT)
+      ),
+      filtered_items AS (
+        SELECT *
+        FROM matched_items
+        WHERE (
+          COALESCE(array_length($1::text[], 1), 0) = 0
+          OR term_match_count > 0
+          OR semantic_similarity >= $6::NUMERIC
+        )
       )
       SELECT
         p.id AS politician_id,
         p.full_name,
-        matched_items.declaration_id,
-        matched_items.declaration_year,
-        matched_items.source_key,
-        matched_items.source_label,
-        matched_items.item_text,
-        matched_items.term_match_count,
-        COUNT(*) OVER (PARTITION BY matched_items.politician_id) AS politician_match_count
-      FROM matched_items
-      JOIN politicians p ON p.id = matched_items.politician_id
-      WHERE (
-        COALESCE(array_length($1::text[], 1), 0) = 0
-        OR matched_items.term_match_count > 0
-      )
+        filtered_items.declaration_id,
+        filtered_items.declaration_year,
+        filtered_items.source_key,
+        filtered_items.source_label,
+        filtered_items.item_text,
+        filtered_items.term_match_count,
+        filtered_items.semantic_similarity,
+        COUNT(*) OVER (PARTITION BY filtered_items.politician_id) AS politician_match_count
+      FROM filtered_items
+      JOIN politicians p ON p.id = filtered_items.politician_id
       ORDER BY
-        COUNT(*) OVER (PARTITION BY matched_items.politician_id) DESC,
-        matched_items.term_match_count DESC,
-        matched_items.declaration_year DESC NULLS LAST,
+        COUNT(*) OVER (PARTITION BY filtered_items.politician_id) DESC,
+        filtered_items.term_match_count DESC,
+        filtered_items.semantic_similarity DESC,
+        filtered_items.declaration_year DESC NULLS LAST,
         p.full_name ASC,
-        matched_items.item_text ASC
+        filtered_items.item_text ASC
       LIMIT $5::INT
     `,
-    [cleanedTerms, cleanedSourceKeys, hasSourceKeys, year, limit],
+    [cleanedTerms, cleanedSourceKeys, hasSourceKeys, year, limit, semanticThreshold],
   );
 
-  return result.rows.map((row) => ({
-    ...row,
-    semantic_similarity: 0,
-  }));
+  return result.rows;
 }
 
 export async function listPoliticianVotingStats(limit = 5000) {
@@ -1544,10 +1630,12 @@ async function fetchRealEstateCategory(client, declarationId, politicianFullName
     const katasterLinks = await buildRealEstateKatasterLinkRows(row.item_text, {
       politicianFullName,
     });
+    const estimatedPriceLabel = getRealEstateEstimatedPriceLabel(row.item_text, politicianFullName);
     records.push({
       id: row.id,
       item_text: row.item_text,
       kataster_links: katasterLinks,
+      estimated_price_label: estimatedPriceLabel,
     });
   }
 

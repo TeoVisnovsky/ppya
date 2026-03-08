@@ -149,10 +149,15 @@ function buildRealEstateRows(category) {
     return [];
   }
 
-  return records.map((record) => ({
-    ...parseRealEstateItem(record.item_text),
-    __katasterLinks: Array.isArray(record.kataster_links) ? record.kataster_links : [],
-  }));
+  return records.map((record) => {
+    const row = {
+      ...parseRealEstateItem(record.item_text),
+      __katasterLinks: Array.isArray(record.kataster_links) ? record.kataster_links : [],
+      "Odhadovana cena": record.estimated_price_label || "-",
+    };
+
+    return row;
+  });
 }
 
 function getStructuredCategoryRows(categoryKey, items) {
@@ -420,7 +425,7 @@ function renderRealEstateCategoryTable(category) {
     return `${renderRealEstateMapSection()}<div class="muted-inline">Bez zaznamov nehnutelnosti.</div>`;
   }
 
-  const columns = [];
+  let columns = [];
   for (const row of rows) {
     for (const key of Object.keys(row)) {
       if (key === "__katasterLinks") {
@@ -432,6 +437,10 @@ function renderRealEstateCategoryTable(category) {
       }
     }
   }
+
+  // Keep estimated price immediately next to LV for quick scanning.
+  columns = columns.filter((column) => column !== "Odhadovana cena" && column !== "LV");
+  columns.push("Odhadovana cena");
   columns.push("LV");
 
   const header = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");

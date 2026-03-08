@@ -1,8 +1,8 @@
 import { listPoliticians, searchSearchableRecords } from "../db/repositories.js";
 
-const DEFAULT_LIMIT = 4;
-const MAX_LIMIT = 8;
-const TABLE_RESULT_LIMIT = 500;
+const DEFAULT_LIMIT = 5;
+const MAX_LIMIT = 12;
+const TABLE_RESULT_LIMIT = 1200;
 
 const GENERIC_SUGGESTIONS = [
   "Who has the most assets?",
@@ -608,6 +608,24 @@ function buildSearchTokens(question) {
 function expandSearchTerms(terms) {
   const expanded = new Map();
 
+  const appendTerm = (term) => {
+    const normalized = normalizeText(term);
+    if (!normalized || normalized.length < 2 || expanded.has(normalized)) {
+      return;
+    }
+
+    expanded.set(normalized, term);
+  };
+
+  const appendStemVariants = (normalized) => {
+    const endings = ["ami", "ou", "ov", "y", "i", "u", "a", "e"];
+    for (const ending of endings) {
+      if (normalized.endsWith(ending) && normalized.length - ending.length >= 4) {
+        appendTerm(normalized.slice(0, -ending.length));
+      }
+    }
+  };
+
   for (const term of terms || []) {
     const cleaned = String(term || "").trim();
     if (cleaned.length < 2) {
@@ -615,9 +633,8 @@ function expandSearchTerms(terms) {
     }
 
     const normalized = normalizeText(cleaned);
-    if (!expanded.has(normalized)) {
-      expanded.set(normalized, cleaned);
-    }
+    appendTerm(cleaned);
+    appendStemVariants(normalized);
 
     const candidateKeys = [normalized];
     if (normalized.endsWith("s") && normalized.length > 3) {
@@ -627,10 +644,7 @@ function expandSearchTerms(terms) {
     for (const candidateKey of candidateKeys) {
       const synonyms = SEARCH_TERM_SYNONYMS[candidateKey] || [];
       for (const synonym of synonyms) {
-        const normalizedSynonym = normalizeText(synonym);
-        if (normalizedSynonym && !expanded.has(normalizedSynonym)) {
-          expanded.set(normalizedSynonym, synonym);
-        }
+        appendTerm(synonym);
       }
     }
   }
@@ -1223,7 +1237,22 @@ export async function answerChatbotQuestion(question, rawPlan = null) {
   const intent = detectIntent(trimmedQuestion, plan);
 
   if (intent === "assetSearch") {
-    return buildAssetSearchResult(trimmedQuestion, dataset, limit, partyOrClub, year, plan);
+    const assetResult = await buildAssetSearchResult(trimmedQuestion, dataset, limit, partyOrClub, year, plan);
+    if (assetResult.intent !== "no-results") {
+      return assetResult;
+    }
+
+    // If strict asset matching fails, fall back to broad text match while keeping the user filters.
+    const fallback = await buildTextSearchResult(
+      trimmedQuestion,
+      dataset,
+      limit,
+      partyOrClub,
+      year,
+      plan,
+      ASSET_SOURCE_KEYS,
+    );
+    return fallback.intent === "no-results" ? assetResult : fallback;
   }
 
   if (intent === "textSearch") {

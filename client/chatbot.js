@@ -7,9 +7,11 @@ const elements = {
   chatForm: document.querySelector("#chatForm"),
   chatInput: document.querySelector("#chatInput"),
   sendButton: document.querySelector("#sendButton"),
+  exportButton: document.querySelector("#exportButton"),
   statusText: document.querySelector("#statusText"),
   conversation: document.querySelector("#conversation"),
-  answerSurface: document.querySelector("#answerSurface"),
+  bestSurface: document.querySelector("#bestSurface"),
+  tableSurface: document.querySelector("#tableSurface"),
   suggestionBar: document.querySelector("#suggestionBar"),
 };
 
@@ -31,7 +33,7 @@ function appendMessage(role, html) {
   wrapper.className = `message message-${role}`;
   wrapper.innerHTML = `
     <div class="message-bubble">
-      <p class="message-label">${role === "user" ? "You" : "Database assistant"}</p>
+      <p class="message-label">${role === "user" ? "Ty" : "Database assistant"}</p>
       ${html}
     </div>
   `;
@@ -44,9 +46,10 @@ function setPending(pending) {
   state.pending = pending;
   elements.sendButton.disabled = pending;
   elements.chatInput.disabled = pending;
+  elements.exportButton.disabled = pending;
   elements.statusText.textContent = pending
-    ? "Querying the latest stored database snapshot..."
-    : "Ready for a database-backed question.";
+    ? "Prehladavam ulozenu databazu..."
+    : "Pripravene na dotaz nad databazou.";
 }
 
 function buildFactCards(facts = []) {
@@ -94,44 +97,86 @@ function buildRelatedGrid(items = []) {
 
 function buildResultTable(table) {
   if (!table || !Array.isArray(table.rows) || !table.rows.length) {
-    return "";
+    return '<div class="empty-state">Pre tento dotaz sa nenasli zhodne zaznamy.</div>';
   }
 
   return `
-    <section class="table-panel">
-      <div class="table-toolbar">
-        <div>
-          <h4>${escapeHtml(table.title || "Matching records")}</h4>
-          <p>${escapeHtml(table.description || "")}</p>
-        </div>
-        <button class="table-export-button" type="button" data-action="export-csv">Download CSV</button>
-      </div>
-      <div class="results-table-wrap">
-        <table class="results-table">
-          <thead>
+    <div class="results-table-wrap">
+      <table class="results-table">
+        <thead>
+          <tr>
+            ${table.columns.map((column) => `<th scope="col">${escapeHtml(column.label)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${table.rows.map((row) => `
             <tr>
-              ${table.columns.map((column) => `<th scope="col">${escapeHtml(column.label)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${table.rows.map((row) => `
-              <tr>
-                ${table.columns.map((column) => {
-                  const value = row[column.key] ?? "";
-                  const link = column.linkKey ? row[column.linkKey] : null;
-                  if (link) {
-                    return `<td><a class="table-link" href="${escapeHtml(link)}">${escapeHtml(value)}</a></td>`;
-                  }
+              ${table.columns.map((column) => {
+                const value = row[column.key] ?? "";
+                const link = column.linkKey ? row[column.linkKey] : null;
+                if (link) {
+                  return `<td><a class="table-link" href="${escapeHtml(link)}">${escapeHtml(value)}</a></td>`;
+                }
 
-                  return `<td>${escapeHtml(value)}</td>`;
-                }).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    </section>
+                return `<td>${escapeHtml(value)}</td>`;
+              }).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
   `;
+}
+
+function renderBestSurface(result) {
+  if (!result) {
+    elements.bestSurface.className = "best-surface empty-state";
+    elements.bestSurface.textContent = "Poloz dotaz a tu uvidis zhrnutie odpovede.";
+    return;
+  }
+
+  elements.bestSurface.className = "best-surface";
+  elements.bestSurface.innerHTML = `
+    <div class="answer-main">
+      <h3>${escapeHtml(result.heading || "Odpoved")}</h3>
+      <p>${escapeHtml(result.answer || "")}</p>
+    </div>
+    ${buildFactCards(result.relatedFacts || [])}
+    <div class="results-grid">
+      ${(result.cards || []).map((card) => `
+        <article class="result-card">
+          <div class="result-card-top">
+            <div>
+              <h4>${escapeHtml(card.title)}</h4>
+              <p class="result-card-subtitle">${escapeHtml(card.subtitle || "")}</p>
+              <p class="result-card-context">${escapeHtml(card.contextLabel || "")}</p>
+            </div>
+            <a class="result-card-link" href="${escapeHtml(card.link || "/")}">Detail</a>
+          </div>
+          ${buildMetricGrid(card.metrics || [])}
+          ${buildRelatedGrid(card.related || [])}
+        </article>
+      `).join("")}
+    </div>
+    ${(result.suggestions || []).length ? `
+      <div class="followup-row">
+        ${result.suggestions.map((suggestion) => `
+          <button class="suggestion-chip followup-chip" type="button" data-prompt="${escapeHtml(suggestion)}">${escapeHtml(suggestion)}</button>
+        `).join("")}
+      </div>
+    ` : ""}
+  `;
+}
+
+function renderTableSurface(result) {
+  const table = result?.table || null;
+  const tableHeader = table
+    ? `<div class="table-headline"><strong>${escapeHtml(table.title || "Vysledky")}</strong><span>${escapeHtml(table.description || "")}</span></div>`
+    : "";
+
+  elements.tableSurface.className = "table-surface";
+  elements.tableSurface.innerHTML = `${tableHeader}${buildResultTable(table)}`;
+  elements.exportButton.disabled = !(table && Array.isArray(table.rows) && table.rows.length);
 }
 
 function escapeCsv(value) {
@@ -172,47 +217,6 @@ function downloadLatestTable() {
   URL.revokeObjectURL(url);
 }
 
-function renderAnswerSurface(result) {
-  if (!result) {
-    elements.answerSurface.className = "answer-surface empty-state";
-    elements.answerSurface.textContent = "Ask a question to populate this panel.";
-    return;
-  }
-
-  elements.answerSurface.className = "answer-surface";
-  elements.answerSurface.innerHTML = `
-    <div class="answer-main">
-      <h3>${escapeHtml(result.heading || "Answer")}</h3>
-      <p>${escapeHtml(result.answer || "")}</p>
-    </div>
-    ${buildFactCards(result.relatedFacts || [])}
-    <div class="results-grid">
-      ${(result.cards || []).map((card) => `
-        <article class="result-card">
-          <div class="result-card-top">
-            <div>
-              <h4>${escapeHtml(card.title)}</h4>
-              <p class="result-card-subtitle">${escapeHtml(card.subtitle || "")}</p>
-              <p class="result-card-context">${escapeHtml(card.contextLabel || "")}</p>
-            </div>
-            <a class="result-card-link" href="${escapeHtml(card.link || "/")}">Open detail</a>
-          </div>
-          ${buildMetricGrid(card.metrics || [])}
-          ${buildRelatedGrid(card.related || [])}
-        </article>
-      `).join("")}
-    </div>
-    ${buildResultTable(result.table)}
-    ${(result.suggestions || []).length ? `
-      <div class="followup-row">
-        ${result.suggestions.map((suggestion) => `
-          <button class="suggestion-chip followup-chip" type="button" data-prompt="${escapeHtml(suggestion)}">${escapeHtml(suggestion)}</button>
-        `).join("")}
-      </div>
-    ` : ""}
-  `;
-}
-
 async function fetchAnswer(message) {
   const response = await fetch("/api/chatbot/query", {
     method: "POST",
@@ -230,7 +234,7 @@ async function fetchAnswer(message) {
   }
 
   if (!response.ok || !payload?.ok) {
-    throw new Error(payload?.error || "The chatbot request failed.");
+    throw new Error(payload?.error || "Chatbot request zlyhal.");
   }
 
   return payload;
@@ -255,24 +259,23 @@ async function submitPrompt(message) {
     const result = await fetchAnswer(trimmedMessage);
     state.latestResult = result;
     loadingNode.remove();
-    appendMessage(
-      "assistant",
-      `<p class="message-copy">${escapeHtml(result.answer || "")}</p>`,
-    );
-    renderAnswerSurface(result);
+    appendMessage("assistant", `<p class="message-copy">${escapeHtml(result.answer || "")}</p>`);
+    renderBestSurface(result);
+    renderTableSurface(result);
   } catch (error) {
     loadingNode.remove();
-    appendMessage(
-      "assistant",
-      `<p class="message-copy">${escapeHtml(error.message || "The chatbot request failed.")}</p>`,
-    );
-    renderAnswerSurface({
-      heading: "Request failed",
-      answer: error.message || "The chatbot request failed.",
+    appendMessage("assistant", `<p class="message-copy">${escapeHtml(error.message || "Chatbot request zlyhal.")}</p>`);
+    const fallback = {
+      heading: "Chyba spracovania",
+      answer: error.message || "Chatbot request zlyhal.",
       relatedFacts: [],
       cards: [],
       suggestions: [],
-    });
+      table: null,
+    };
+    state.latestResult = fallback;
+    renderBestSurface(fallback);
+    renderTableSurface(fallback);
   } finally {
     setPending(false);
     elements.chatInput.focus();
@@ -281,12 +284,6 @@ async function submitPrompt(message) {
 
 function bindSuggestionClicks(container) {
   container.addEventListener("click", (event) => {
-    const actionButton = event.target.closest("[data-action='export-csv']");
-    if (actionButton) {
-      downloadLatestTable();
-      return;
-    }
-
     const button = event.target.closest("[data-prompt]");
     if (!button) {
       return;
@@ -302,16 +299,19 @@ function bindEvents() {
     submitPrompt(elements.chatInput.value);
   });
 
+  elements.exportButton.addEventListener("click", downloadLatestTable);
+
   bindSuggestionClicks(elements.suggestionBar);
-  bindSuggestionClicks(elements.answerSurface);
+  bindSuggestionClicks(elements.bestSurface);
 }
 
 function init() {
   appendMessage(
     "assistant",
-    '<p class="message-copy">Ask for database results in plain language. For search-heavy questions, I will identify the relevant tables, rank the strongest match, and show the matching records in a downloadable table.</p>',
+    '<p class="message-copy">Zadaj dotaz typu: "Kto ma motorku v roku 2024?" alebo "Kto ma sperky?". Odpovede sa tvoria iba z databazovych zaznamov.</p>',
   );
-  renderAnswerSurface(null);
+  renderBestSurface(null);
+  renderTableSurface(null);
   bindEvents();
 }
 
