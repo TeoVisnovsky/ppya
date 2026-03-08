@@ -444,6 +444,23 @@ export async function savePoliticianProfile(payload, dbPool = pool) {
         candidate_party = COALESCE($5, candidate_party),
         parliamentary_club = COALESCE($6, parliamentary_club),
         parliamentary_memberships = COALESCE($7::jsonb, parliamentary_memberships),
+        deputy_title = COALESCE($8, deputy_title),
+        deputy_first_name = COALESCE($9, deputy_first_name),
+        deputy_last_name = COALESCE($10, deputy_last_name),
+        deputy_birth_date = COALESCE($11, deputy_birth_date),
+        deputy_birth_date_text = COALESCE($12, deputy_birth_date_text),
+        deputy_nationality = COALESCE($13, deputy_nationality),
+        deputy_residence = COALESCE($14, deputy_residence),
+        deputy_region = COALESCE($15, deputy_region),
+        deputy_email = COALESCE($16, deputy_email),
+        deputy_website = COALESCE($17, deputy_website),
+        candidate_party_memberships = COALESCE($18::jsonb, candidate_party_memberships),
+        deputy_personal_data = COALESCE($19::jsonb, deputy_personal_data),
+        deputy_photo_url = COALESCE($20, deputy_photo_url),
+        deputy_photo_content_type = COALESCE($21, deputy_photo_content_type),
+        deputy_photo_data = COALESCE($22, deputy_photo_data),
+        deputy_photo_scraped_at = CASE WHEN $20 IS NOT NULL OR $22 IS NOT NULL THEN NOW() ELSE deputy_photo_scraped_at END,
+        deputy_term_info = COALESCE($23::jsonb, deputy_term_info),
         deputy_profile_scraped_at = NOW(),
         updated_at = NOW()
       WHERE id = $1
@@ -456,6 +473,22 @@ export async function savePoliticianProfile(payload, dbPool = pool) {
       payload.candidateParty ?? null,
       payload.parliamentaryClub ?? null,
       JSON.stringify(payload.parliamentaryMemberships || []),
+      payload.deputyTitle ?? null,
+      payload.deputyFirstName ?? null,
+      payload.deputyLastName ?? null,
+      payload.deputyBirthDate ?? null,
+      payload.deputyBirthDateText ?? null,
+      payload.deputyNationality ?? null,
+      payload.deputyResidence ?? null,
+      payload.deputyRegion ?? null,
+      payload.deputyEmail ?? null,
+      payload.deputyWebsite ?? null,
+      JSON.stringify(payload.candidatePartyMemberships || []),
+      JSON.stringify(payload.deputyPersonalData || {}),
+      payload.deputyPhotoUrl ?? null,
+      payload.deputyPhotoContentType ?? null,
+      payload.deputyPhotoData ?? null,
+      JSON.stringify(payload.deputyTermInfo || {}),
     ],
   );
 }
@@ -1052,8 +1085,25 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
           nrsr_user_id,
           full_name,
           candidate_party,
+          candidate_party_memberships,
           parliamentary_club,
           parliamentary_memberships,
+          deputy_title,
+          deputy_first_name,
+          deputy_last_name,
+          deputy_birth_date,
+          deputy_birth_date_text,
+          deputy_nationality,
+          deputy_residence,
+          deputy_region,
+          deputy_email,
+          deputy_website,
+          deputy_photo_url,
+          deputy_photo_content_type,
+          deputy_photo_data,
+          deputy_photo_scraped_at,
+          deputy_term_info,
+          deputy_personal_data,
           deputy_profile_id,
           deputy_profile_period,
           deputy_profile_url,
@@ -1069,6 +1119,12 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
     const politician = politicianResult.rows[0];
     if (!politician) {
       return null;
+    }
+
+    if (politician.deputy_photo_data && politician.deputy_photo_content_type) {
+      politician.deputy_photo_data = Buffer.from(politician.deputy_photo_data).toString("base64");
+    } else {
+      politician.deputy_photo_data = null;
     }
 
     await ensurePoliticianRiskFactorsCurrent(client, politicianId);
@@ -1201,7 +1257,12 @@ export async function getTableData(tableName, limit = 100, offset = 0) {
   const safeTableName = quoteIdentifier(tableName);
   const columnsResult = await pool.query(
     `
-      SELECT column_name
+      SELECT
+        column_name,
+        data_type,
+        udt_name,
+        is_nullable,
+        column_default
       FROM information_schema.columns
       WHERE table_schema = 'public' AND table_name = $1
       ORDER BY ordinal_position ASC
@@ -1217,7 +1278,13 @@ export async function getTableData(tableName, limit = 100, offset = 0) {
 
   return {
     tableName,
-    columns: columnsResult.rows.map((row) => row.column_name),
+    columns: columnsResult.rows.map((row) => ({
+      name: row.column_name,
+      dataType: row.data_type,
+      udtName: row.udt_name,
+      nullable: row.is_nullable === 'YES',
+      defaultValue: row.column_default,
+    })),
     totalCount: Number(countResult.rows[0]?.total_count || 0),
     rows: rowsResult.rows,
   };

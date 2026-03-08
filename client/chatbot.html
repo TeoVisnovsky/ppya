@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PPYA | Chatbot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/chatbot.css" />
+  </head>
+  <body>
+    <div class="chatbot-page">
+      <div class="aurora aurora-a" aria-hidden="true"></div>
+      <div class="aurora aurora-b" aria-hidden="true"></div>
+
+      <div class="chatbot-shell">
+        <header class="chatbot-hero">
+          <div>
+            <p class="eyebrow"><a href="/">Back to dataset</a></p>
+            <h1>Ask the database instead of digging through it.</h1>
+            <p class="hero-copy">
+              This assistant only answers from stored politician data: latest declarations, asset counts, income, party context, and risk metrics.
+            </p>
+          </div>
+
+          <aside class="hero-panel">
+            <span class="panel-kicker">What it can do</span>
+            <ul class="hero-points">
+              <li>Rank politicians by assets, income, or risk</li>
+              <li>Filter answers by party, club, or year</li>
+              <li>Show compact politician cards with the latest facts</li>
+            </ul>
+          </aside>
+        </header>
+
+        <main class="chatbot-layout">
+          <section class="chat-column panel">
+            <div class="panel-header panel-header-row">
+              <div>
+                <h2>Conversation</h2>
+                <p id="statusText">Ready for a database-backed question.</p>
+              </div>
+            </div>
+
+            <div id="suggestionBar" class="suggestion-bar" aria-label="Suggested prompts">
+              <button class="suggestion-chip" type="button" data-prompt="Who has the most assets?">Most assets</button>
+              <button class="suggestion-chip" type="button" data-prompt="Show the top 5 highest-income politicians.">Highest income</button>
+              <button class="suggestion-chip" type="button" data-prompt="Which politicians have the highest risk factor?">Highest risk</button>
+              <button class="suggestion-chip" type="button" data-prompt="Tell me about Robert Fico.">Profile lookup</button>
+            </div>
+
+            <div id="conversation" class="conversation" aria-live="polite"></div>
+
+            <form id="chatForm" class="composer">
+              <label class="composer-field" for="chatInput">
+                <span class="sr-only">Ask the database</span>
+                <textarea
+                  id="chatInput"
+                  name="message"
+                  rows="1"
+                  maxlength="500"
+                  placeholder="Ask a question like 'Who has the most assets in Smer?'"
+                  required
+                ></textarea>
+              </label>
+              <button id="sendButton" class="send-button" type="submit">Ask</button>
+            </form>
+          </section>
+
+          <aside class="results-column">
+            <section class="panel insight-panel">
+              <div class="panel-header">
+                <h2>Latest answer</h2>
+                <p>The summary, related facts, and politician cards from the most recent response.</p>
+              </div>
+
+              <div id="answerSurface" class="answer-surface empty-state">
+                Ask a question to populate this panel.
+              </div>
+            </section>
+          </aside>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="/chatbot.js"></script>
+  </body>
+</html>

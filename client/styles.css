@@ -886,6 +886,76 @@ tbody tr:hover {
   justify-content: flex-end;
 }
 
+.db-page .db-search-control {
+  margin-bottom: 16px;
+}
+
+.db-page .db-toolbar {
+  margin-bottom: 16px;
+}
+
+.db-page .db-schema-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.db-page .db-schema-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.db-page .db-schema-stat {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.db-page .db-schema-stat span {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.db-page .db-schema-stat strong {
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.db-page .db-schema-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.db-page .db-schema-card {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.db-page .db-schema-card h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.db-page .db-schema-card p,
+.db-page .db-schema-card small {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.db-page .db-schema-card small {
+  display: block;
+  margin-top: 6px;
+}
+
 .db-page .db-table-panel .table-wrap {
   max-height: calc(100vh - 270px);
 }
@@ -916,7 +986,21 @@ tbody tr:hover {
 .db-page .db-table-panel td {
   color: rgba(255, 255, 255, 0.94);
   vertical-align: top;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 420px;
+}
+
+.db-page .db-cell-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.db-page .db-null {
+  color: rgba(255, 255, 255, 0.42);
+  font-style: italic;
 }
 
 .db-page .db-table-panel tbody tr:hover {
@@ -988,6 +1072,52 @@ tbody tr:hover {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.detail-page .profile-photo-shell {
+  margin-bottom: 14px;
+}
+
+.detail-page .profile-contact-shell {
+  margin-bottom: 14px;
+}
+
+.detail-page .profile-photo-card {
+  width: min(100%, 180px);
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+}
+
+.detail-page .profile-photo-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1.2;
+  object-fit: cover;
+}
+
+.detail-page .profile-contact-card {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 280px);
+}
+
+.detail-page .profile-contact-link {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.94);
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.detail-page .profile-contact-link:hover {
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .detail-page .summary-list {
@@ -1341,6 +1471,10 @@ tbody tr:hover {
   }
 
   .db-page .db-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .db-page .db-schema-summary {
     grid-template-columns: 1fr;
   }
 

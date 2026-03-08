@@ -53,6 +53,8 @@
               <option value="50" selected>50</option>
               <option value="100">100</option>
               <option value="250">250</option>
+              <option value="500">500</option>
+              <option value="1000">1000</option>
             </select>
           </label>
         </div>
@@ -67,6 +69,10 @@
             </div>
             <button id="reloadTablesButton" class="ghost-button" type="button">Obnovit</button>
           </div>
+          <label class="control db-search-control">
+            <span>Search tabuliek</span>
+            <input id="tableSearchInput" type="search" placeholder="napr. politicians" />
+          </label>
           <div id="tablesList" class="tables-list"></div>
         </section>
 
@@ -81,6 +87,13 @@
               <button id="nextPageButton" class="ghost-button" type="button">Dalsia</button>
             </div>
           </div>
+          <div class="db-toolbar">
+            <label class="control db-search-control control-wide">
+              <span>Search riadkov</span>
+              <input id="rowSearchInput" type="search" placeholder="hladaj vo viditelnych riadkoch" />
+            </label>
+          </div>
+          <div id="schemaContainer" class="db-schema-panel"></div>
           <div id="tableContainer" class="table-wrap glass-table-wrap"></div>
         </section>
       </main>

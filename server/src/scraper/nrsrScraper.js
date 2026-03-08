@@ -1,34 +1,29 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import axios from "axios";
-import * as cheerio from "cheerio";
 import { config } from "../config.js";
 import { saveDeclaration, savePoliticianProfile } from "../db/repositories.js";
 import { closeAllPools, getScraperWriteTargets } from "../db/pool.js";
-import { parseDeclarationHtml, parseDeputyProfileHtml } from "./parser.js";
+import { parseDeclarationHtml } from "./parser.js";
 import { buildPoliticianLookup, matchPolitician } from "./nameMatching.js";
+import {
+  SCRAPER_HEADERS,
+  buildDeputyMandateChangesLookup,
+  fetchDeputyList,
+  fetchDeputyMandateChanges,
+  fetchDeputyProfile,
+} from "./deputyProfiles.js";
 
 const __filename = fileURLToPath(import.meta.url);
 
 const LIST_URL = "https://www.nrsr.sk/web/Default.aspx?sid=vnf/zoznam&ViewType=1";
 const DETAIL_URL = "https://www.nrsr.sk/web/Default.aspx?sid=vnf/oznamenie&UserId=";
-const DEPUTIES_URL = "https://www.nrsr.sk/web/Default.aspx?sid=poslanci";
-
-const SCRAPER_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-};
-
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function toAbsoluteUrl(href) {
-  return new URL(href, "https://www.nrsr.sk").toString();
-}
-
 async function fetchList() {
-  const response = await axios.get(LIST_URL, { timeout: 30000, headers: SCRAPER_HEADERS });
+  const response = await (await import("axios")).default.get(LIST_URL, { timeout: 30000, headers: SCRAPER_HEADERS });
+  const cheerio = await import("cheerio");
   const $ = cheerio.load(response.data);
 
   const map = new Map();
@@ -39,7 +34,7 @@ async function fetchList() {
       return;
     }
 
-    const absoluteUrl = toAbsoluteUrl(href);
+    const absoluteUrl = new URL(href, "https://www.nrsr.sk").toString();
     const url = new URL(absoluteUrl);
     const userId = url.searchParams.get("UserId");
     const label = $(anchor).text().trim();
@@ -56,53 +51,9 @@ async function fetchList() {
   return Array.from(map.values());
 }
 
-async function fetchDeputyList() {
-  const response = await axios.get(DEPUTIES_URL, { timeout: 30000, headers: SCRAPER_HEADERS });
-  const $ = cheerio.load(response.data);
-  const deputies = [];
-
-  $("a[href*='sid=poslanci/poslanec']").each((_, anchor) => {
-    const href = $(anchor).attr("href");
-    const name = $(anchor).text().trim();
-
-    if (!href || !name) {
-      return;
-    }
-
-    const absoluteUrl = toAbsoluteUrl(href);
-    const url = new URL(absoluteUrl);
-    const poslanecId = Number(url.searchParams.get("PoslanecID"));
-    const cisObdobia = Number(url.searchParams.get("CisObdobia"));
-
-    if (!Number.isFinite(poslanecId)) {
-      return;
-    }
-
-    deputies.push({
-      id: poslanecId,
-      name,
-      poslanecId,
-      cisObdobia: Number.isFinite(cisObdobia) ? cisObdobia : null,
-      profileUrl: absoluteUrl,
-    });
-  });
-
-  return deputies;
-}
-
-async function fetchDeputyProfile(deputy) {
-  const response = await axios.get(deputy.profileUrl, { timeout: 30000, headers: SCRAPER_HEADERS });
-  return parseDeputyProfileHtml({
-    html: response.data,
-    sourceUrl: deputy.profileUrl,
-    poslanecId: deputy.poslanecId,
-    cisObdobia: deputy.cisObdobia,
-  });
-}
-
 async function fetchDeclarationForPolitician({ userId, name }) {
   const url = `${DETAIL_URL}${encodeURIComponent(userId)}`;
-  const response = await axios.get(url, { timeout: 30000, headers: SCRAPER_HEADERS });
+  const response = await (await import("axios")).default.get(url, { timeout: 30000, headers: SCRAPER_HEADERS });
 
   return parseDeclarationHtml({
     html: response.data,
@@ -115,6 +66,8 @@ async function fetchDeclarationForPolitician({ userId, name }) {
 export async function runScrape({ limit } = {}) {
   const politicians = await fetchList();
   const deputyList = await fetchDeputyList();
+  const deputyMandateChanges = await fetchDeputyMandateChanges(deputyList[0]?.cisObdobia);
+  const deputyMandateChangesLookup = buildDeputyMandateChangesLookup(deputyMandateChanges);
   const deputyLookup = buildPoliticianLookup(deputyList);
   const deputyProfileCache = new Map();
   const selected = typeof limit === "number" ? politicians.slice(0, limit) : politicians;
@@ -138,7 +91,7 @@ export async function runScrape({ limit } = {}) {
             const cacheKey = `${matchedDeputy.poslanecId}:${matchedDeputy.cisObdobia || "na"}`;
             let deputyProfile = deputyProfileCache.get(cacheKey);
             if (!deputyProfile) {
-              deputyProfile = await fetchDeputyProfile(matchedDeputy);
+              deputyProfile = await fetchDeputyProfile(matchedDeputy, deputyMandateChangesLookup);
               deputyProfileCache.set(cacheKey, deputyProfile);
             }
 
@@ -150,6 +103,22 @@ export async function runScrape({ limit } = {}) {
               candidateParty: deputyProfile.candidateParty,
               parliamentaryClub: deputyProfile.parliamentaryClub,
               parliamentaryMemberships: deputyProfile.memberships,
+              deputyTitle: deputyProfile.title,
+              deputyFirstName: deputyProfile.firstName,
+              deputyLastName: deputyProfile.lastName,
+              deputyBirthDate: deputyProfile.birthDate,
+              deputyBirthDateText: deputyProfile.birthDateText,
+              deputyNationality: deputyProfile.nationality,
+              deputyResidence: deputyProfile.residence,
+              deputyRegion: deputyProfile.region,
+              deputyEmail: deputyProfile.email,
+              deputyWebsite: deputyProfile.website,
+              candidatePartyMemberships: deputyProfile.candidatePartyMemberships,
+              deputyPersonalData: deputyProfile.personalData,
+              deputyPhotoUrl: deputyProfile.photoUrl,
+              deputyPhotoContentType: deputyProfile.photoContentType,
+              deputyPhotoData: deputyProfile.photoData,
+              deputyTermInfo: deputyProfile.termInfo,
             }, target.pool);
           }
 
