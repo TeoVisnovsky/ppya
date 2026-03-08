@@ -1,206 +1,310 @@
-# PPYA - Majetkove priznania scraper
+# PPYA - Investigativny OSINT nad majetkovymi priznaniami
 
-Project structure:
-- `client/` - frontend placeholder
-- `server/` - Express API + scraper
-- `database/` - SQL migrations
+## Problem, ktory riesime
+Investigativni novinari dnes pri analyzovani majetkovych priznani prechadzaju dlhy, manualny a opakovany proces:
+1. otvorenie zdrojov na NRSR,
+2. hladanie konkretneho politika,
+3. manualne citanie kategorii majetku, prijmov, zavazkov a funkcii,
+4. porovnavanie rokov medzi sebou,
+5. vytvaranie vlastnych tabuliek a ad-hoc statistik,
+6. overovanie nehnutelnosti cez listy vlastnictva a mapy.
 
-## 1. Start PostgreSQL
+Tento proces je pomaly, narocny na chyby a tazko replikovatelny medzi redakcnymi timami.
 
-Docker is not required.
+## Co zjednodusujeme
+Zjednodusujeme cely investigativny workflow od "raw dokumentov" po "analyzovatelny vystup":
+1. centralizujeme data z NRSR do konzistentnej DB,
+2. davame ich do prehladnej aplikacie s filtrami,
+3. pridavame detail politika so signalmi podozrivosti,
+4. umoznujeme pokrocile dotazy cez chatbot napojeny iba na databazu,
+5. prepajame nehnutelnosti s katastrom, LV a mapou.
 
-This project now works with plain local PostgreSQL. `pgvector` is optional and is enabled only if your local PostgreSQL installation supports it.
+## Ako to riesime
+Projekt poskytuje jednoduchu webovu aplikaciu s prehladnym dizajnom:
+1. `index` stranka: rychle filtrovanie a porovnavanie politikov.
+2. `detail` politika: majetok, spolocnosti/aktivity, prijmy, zavazky, pomerove indikatory rastu.
+3. `chatbot`: prirodzeny jazyk -> databazovy query plan -> vysledky v kartach a tabulke.
 
-You have 3 valid options:
+V detaile politika sa zobrazuju prakticke investigativne metriky:
+1. podiel platu z verejnej funkcie na celkovych prijmoch,
+2. rast prijmov mimo verejnej funkcie,
+3. rast poctu majetkovych poloziek,
+4. kombinovany risk faktor (heuristicka indikacia pre dalsiu investigaciu).
 
-### Option A: Existing local PostgreSQL
+Pri nehnutelnostiach su dostupne:
+1. geolokacia na mape Slovenska,
+2. odkazy na list vlastnictva (LV),
+3. pripravena vrstva pre odhady hodnoty majetku (vratane LV-based enrichmentu).
 
-If you already have PostgreSQL installed locally, create a database and point `DATABASE_URL` to it.
+## Pre koho je system
+1. Investigativni novinari,
+2. analytici watchdog organizacii,
+3. datovi reporteri,
+4. interny redakcny fact-checking.
 
-Example:
+## Hlavne funkcionality
 
+### 1. Prehlad politikov (`/`)
+1. jednotna tabulka politikov z NRSR,
+2. rychle filtrovanie,
+3. preklik na detailne profily.
+
+### 2. Detail politika (`/detail.html?id=...`)
+1. historicke priznania po rokoch,
+2. majetkove kategorie (nehnutelnosti, hnutelne veci, majetkove prava, zavazky, dary),
+3. prijmy a derived pomery,
+4. risk summary a timeline,
+5. nehnutelnosti na mape + LV odkazy.
+
+### 3. Chatbot nad databazou (`/chatbot.html`)
+1. odpoveda iba z databazovych dat,
+2. mapuje prirodzeny jazyk na intents a query plan,
+3. pouziva semanticke vyhladavanie v tabulkach,
+4. vracia najlepsie zhody + komplet tabulku,
+5. umoznuje export do CSV.
+
+## Architektura systemu
+
+### High-level komponenty
+1. `client/` - staticky frontend (HTML/CSS/JS),
+2. `server/` - Express API, scraping, analyza, chatbot sluzby,
+3. `database/` - migracie a operacne skripty,
+4. PostgreSQL - centralny zdroj pravdy.
+
+### Datovy tok
+1. Scraper ziska data z NRSR.
+2. ETL vrstvy rozdelia data do normalizovanych tabuliek.
+3. API servuje agregovane view modely pre UI.
+4. Chatbot vykona query nad DB vrstvou a zostavi odpoved.
+5. UI zobrazi tabulky, metriky, mapu, LV odkazy a exporty.
+
+## Riadny setup (rich setup)
+
+### Predpoklady
+1. Node.js 18+ (odporucane 20+),
+2. PostgreSQL 14+,
+3. Windows PowerShell alebo bash,
+4. optional Docker (lokalny disposable Postgres).
+
+Poznamka pre Windows: ak je blokovany `npm.ps1`, pouzivaj `npm.cmd`.
+
+### 1. Databaza
+Mas 3 moznosti:
+1. local PostgreSQL,
+2. hosted PostgreSQL (napr. Supabase),
+3. Docker Postgres.
+
+Priklad local DB URL:
 ```text
 DATABASE_URL=postgresql://postgres:your_password@localhost:5432/ppya
 ```
 
-You can initialize the database automatically with the included PowerShell script:
-
+Rychla inicializacia local DB:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\database\init-local-postgres.ps1 -DatabaseName ppya -UserName postgres -Password your_password
 ```
 
-Or create it manually with `psql`:
-
+### 2. Konfiguracia servera
 ```powershell
-& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -h localhost -p 5432 -d postgres -c "CREATE DATABASE ppya;"
-```
-
-If `pgvector` is installed locally, you can enable it manually too:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-```
-
-### Option B: Hosted PostgreSQL
-
-You can use Neon, Supabase, Railway, or another hosted PostgreSQL provider.
-
-Set `DATABASE_URL` in `server/.env` to that connection string.
-
-### Option C: Docker
-
-Use Docker only if you want a disposable local PostgreSQL instance without using your existing installation.
-
-```bash
-docker compose up -d
-```
-
-If you use Docker, it starts Postgres on `localhost:5432` with:
-- db: `ppya`
-- user: `ppya`
-- password: `ppya`
-
-## 2. Configure server env
-
-Copy `server/.env.example` to `server/.env` and adjust if needed.
-
-## 3. Install server dependencies
-
-```bash
 cd server
-npm install
+copy .env.example .env
 ```
 
-## 4. Run migrations
+Skontroluj hlavne premenne:
+1. `DATABASE_URL` alebo `LOCAL_DATABASE_URL`/`SUPABASE_DATABASE_URL`,
+2. `DEV_MODE` (local vs supabase primary target),
+3. scraper limity a period parametre,
+4. optional AI estimation parametre.
 
-```bash
-npm run migrate
+### 3. Instalacia zavislosti
+```powershell
+cd server
+npm.cmd install
 ```
 
-## 5. Scrape data
-
-```bash
-npm run scrape -- 20
+### 4. Migracie
+```powershell
+npm.cmd run migrate
 ```
 
-The numeric argument is optional and sets max politician profiles to process.
-
-To scrape voting summaries per politician and per `CisObdobia` into both local PostgreSQL and Supabase at once:
-
-```bash
-npm run scrape:voting
+### 5. Naplnenie dat
+Zakladny scraping:
+```powershell
+npm.cmd run scrape -- 20
 ```
 
-Optional positional arguments:
-- first argument: max `PoslanecMasterID` to probe
-- second argument: max `CisObdobia` to probe
-
-Example:
-
-```bash
-npm run scrape:voting -- 1500 9
+Profilovy scraping:
+```powershell
+npm.cmd run scrape:profiles
 ```
 
-## 6. Start API server
-
-```bash
-npm start
+Voting scraping:
+```powershell
+npm.cmd run scrape:voting
 ```
 
-Then open:
+Social scraping:
+```powershell
+npm.cmd run scrape:social
+```
 
+Kataster linkovanie nehnutelnosti:
+```powershell
+npm.cmd run link:real-estate
+```
+
+Odhady hnutelnych veci backfill:
+```powershell
+npm.cmd run estimate:movable-assets
+```
+
+### 6. Spustenie aplikacie
+```powershell
+npm.cmd start
+```
+
+Otvori:
 ```text
 http://localhost:4000
 ```
 
-The Express server now also serves the frontend pages:
-- `/` - searchable politicians table
-- `/detail.html?id=123` - politician detail page
+## Ako system pouzivat (novinarsky workflow)
 
-Server endpoints:
-- `GET /api/health`
-- `POST /api/migrate`
-- `POST /api/scrape?limit=20`
-- `POST /api/scrape/voting?maxPoliticianMasterId=1500&maxPeriod=9`
-- `GET /api/politicians?limit=100`
-- `GET /api/politicians/:id`
-- `GET /api/politicians/:id/declarations`
+### Workflow A: rychly screening
+1. otvor `/`,
+2. filtruj politikov,
+3. otvor detail kandidata,
+4. pozri prijmy, majetok, zavazky, risk pomery,
+5. checkni nehnutelnosti cez mapu a LV.
 
-## Full startup sequence without Docker
+### Workflow B: konkretna investigativna otazka
+1. otvor `/chatbot.html`,
+2. poloz dotaz prirodzenym jazykom,
+3. prezri najlepsiu odpoved,
+4. otvor tabulku vsetkych zhod,
+5. exportuj CSV pre redakcny notebook alebo dalsiu analyzu.
 
-From a fresh machine or empty database, run in this order:
+### Workflow C: porovnanie medzi rokmi
+1. v detaile prepni `declarationId`,
+2. porovnaj rast prijmov a majetku,
+3. identifikuj skoky,
+4. nasledne over cez LV, hlasovania, funkcie a aktivity.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\database\init-local-postgres.ps1 -DatabaseName ppya -UserName postgres -Password your_password
-cd server
-npm install
-copy .env.example .env
-npm run migrate
-npm run scrape -- 20
-npm start
-```
+## API endpointy
+Zaklad:
+1. `GET /api/health`
+2. `POST /api/migrate`
+3. `POST /api/scrape`
+4. `POST /api/scrape/voting`
+5. `GET /api/politicians`
+6. `GET /api/politicians/:id`
+7. `GET /api/politicians/:id/declarations`
 
-Before `npm run migrate`, make sure your PostgreSQL database already exists and `DATABASE_URL` points to it.
+Voting:
+1. `GET /api/voting-stats`
+2. `GET /api/voting-records`
+3. `GET /api/voting-transcripts`
 
-If you are using Docker, start it first:
+Admin:
+1. `GET /api/admin/tables`
+2. `GET /api/admin/tables/:tableName`
 
-```bash
-docker compose up -d
-```
+Chatbot:
+1. `POST /api/chatbot/query`
 
-If you want to scrape the full dataset, remove the limit:
+Kataster safe redirect:
+1. `GET /api/kataster/open?target=...`
 
-```bash
-node src/scraper/nrsrScraper.js
-```
+## Scraping - podrobny prehlad
 
-## Notes
+### Co scrapujeme
+1. majetkove priznania,
+2. profilove metadata poslancov,
+3. voting data a prepisy,
+4. social media metadata (web scraping modul),
+5. kataster prepojenia pre nehnutelnosti.
 
-- Scraping logic currently parses the declaration table and maps data into category-specific tables.
-- The main scrape now also enriches matched current MPs with candidate party and parliamentary club from NR SR deputy profile pages.
-- `declaration_voting` exists in schema for your requested `hlasovanie` category and can be populated when source pages expose voting records.
-- `politician_voting_stats` stores aggregate voting counts per politician and per `CisObdobia`, matched back to existing `politicians` rows by normalized name.
-- The voting scraper writes to every configured target in `LOCAL_DATABASE_URL` and `SUPABASE_DATABASE_URL`, deduplicating identical connection strings.
-- `searchable_chunks` gets a `vector(1536)` column only when `pgvector` is available in your PostgreSQL installation.
-- Politician detail now exposes heuristic risk coefficients based on salary-to-income ratios, asset-count changes, and other-income pressure against a maintained Slovak salary baseline.
+### Scraping pipeline
+1. fetch HTML/XML zdrojov,
+2. parse do `raw_payload`,
+3. normalizacia na kategoriove tabulky,
+4. deduplikacia cez `item_hash`,
+5. enrich (profily, kataster links, estimations),
+6. expose cez API.
 
-## Move Local Data To Supabase
+### Kvalita dat
+1. unikatne kluce na kombinaciach deklaracie a hashov,
+2. fallbacky pri nekompletnych zdrojoch,
+3. priebezna iteracia parserov podla zmien na strane zdroja.
 
-If you already scraped data into your local PostgreSQL and want to move it to Supabase safely:
+## Databaza - podrobna architektura a flow
 
-1. Keep your local database running.
-2. Use the included migration script, which first creates local backups and only then imports to Supabase.
+### Core entity model
+1. `politicians` - master profil politika,
+2. `declarations` - rocne priznania,
+3. kategoriove tabulky `declaration_*` - strukturovane polozky priznani.
 
-Example:
+### Analyticke a rozsirujuce tabulky
+1. `politician_voting_stats`,
+2. `politician_voting_page_snapshots`,
+3. `politician_voting_records`,
+4. `politician_voting_transcripts`,
+5. `declaration_real_estate_kataster_links`,
+6. `declaration_movable_asset_estimations`,
+7. `searchable_chunks` (optional vector column pri dostupnom `pgvector`).
 
+### Flow v DB vrstve
+1. write path: scraper -> repositories -> SQL upserts/inserts,
+2. read path: repositories -> agregacie -> API DTO pre frontend/chatbot,
+3. analyza path: risk factors, pomerove ukazovatele, enrichment.
+
+### Bezpecnost a integrita dat
+1. parameterized SQL dotazy (bez string concatenation user inputu),
+2. whitelist pristupu pre admin table read endpoint,
+3. safe redirect guard pre kataster URL,
+4. TLS nastavenia pre cloud DB pripojenia,
+5. lokalne backup/restore skripty pred migraciou dat,
+6. ON DELETE CASCADE medzi deklaraciami a kategoriami pre konzistenciu.
+
+## Operacie s datami (backup, migrate, restore)
+
+### Presun local -> Supabase
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\database\copy-local-to-supabase.ps1 `
-	-SourceDatabaseUrl "postgresql://postgres:your_local_password@localhost:5432/ppya" `
-	-TargetDatabaseUrl "your_supabase_connection_string"
+  -SourceDatabaseUrl "postgresql://postgres:your_local_password@localhost:5432/ppya" `
+  -TargetDatabaseUrl "your_supabase_connection_string"
 ```
 
-What the script does:
-- creates a full backup of your local database
-- creates a data-only SQL backup of the `public` schema
-- runs this project's migrations against the Supabase target
-- imports your local data into Supabase
-
-Backups are saved in `database/backups/`.
-
-If Supabase rejects the connection, use the exact connection string from Supabase and include `?sslmode=require` when needed.
-
-## Restore A Backup To Any Target
-
-To restore one of the saved SQL backups into either local PostgreSQL or Supabase:
-
+### Restore backupu
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\database\restore-backup-to-target.ps1 `
-	-TargetDatabaseUrl "your_target_database_url" `
-	-BackupFile ".\database\backups\local_public_data_YYYYMMDD_HHMMSS.sql"
+  -TargetDatabaseUrl "your_target_database_url" `
+  -BackupFile ".\database\backups\local_public_data_YYYYMMDD_HHMMSS.sql"
 ```
 
-The restore script:
-- runs migrations on the target first
-- truncates the `public` schema tables
-- imports the backup file
-- reseeds serial sequences after import
+## Ako to chceme rozvijat do buducnosti
+1. Presnejsie valuation modely nehnutelnosti (LV + geodata + trhove benchmarky).
+2. Pokrocile anomaly detection (casove rady, cross-category korelacie).
+3. Audit trail pre zmeny parserov a data provenance dashboard.
+4. Lepse vysvetlovanie risk score pre redakcny use-case (explainability).
+5. Rich exporty: JSON schema export, reproducible report bundles.
+6. Team collaboration: ulozene query, annotation a sharing medzi novinarmi.
+7. Volitelna DB read-only auth vrstva pre multi-user deployment.
+
+## Limity aktualnej verzie
+1. kvalita zavisi od struktury externych zdrojov,
+2. niektore enrichment kroky su heuristicke,
+3. chatbot je databazovo orientovany, nie je to pravny ani financny expert,
+4. risk indikator je signal pre investigaciu, nie automaticky dokaz.
+
+## Referencie
+1. NRSR verejne data a dokumenty majetkovych priznani.
+2. Interny projektovy podklad: `the spot.pdf` (prilozena referencia od zadavatela).
+
+## Strucna orientacia v repozitari
+1. `client/` - web rozhranie (`index`, `detail`, `voting`, `chatbot`),
+2. `server/src/scraper/` - scraping pipeline,
+3. `server/src/db/` - migracie runner, repositories, DB integracia,
+4. `server/src/analysis/` - risk a estimation logika,
+5. `database/migrations/` - SQL schema evolucia,
+6. `database/*.ps1` - operational scripts (init/copy/restore).
