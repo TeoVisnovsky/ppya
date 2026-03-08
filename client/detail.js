@@ -6,6 +6,8 @@ const elements = {
   detailTitle: document.querySelector("#detailTitle"),
   detailSubtitle: document.querySelector("#detailSubtitle"),
   declarationSelect: document.querySelector("#declarationSelect"),
+  profilePhoto: document.querySelector("#profilePhoto"),
+  profileContact: document.querySelector("#profileContact"),
   profileMeta: document.querySelector("#profileMeta"),
   summaryList: document.querySelector("#summaryList"),
   timelineContainer: document.querySelector("#timelineContainer"),
@@ -24,6 +26,52 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function getDeputyPhotoSource(politician) {
+  if (politician?.deputy_photo_data && politician?.deputy_photo_content_type) {
+    return `data:${politician.deputy_photo_content_type};base64,${politician.deputy_photo_data}`;
+  }
+
+  return politician?.deputy_photo_url || null;
+}
+
+function renderProfilePhoto(politician) {
+  const photoSource = getDeputyPhotoSource(politician);
+  if (!photoSource) {
+    elements.profilePhoto.innerHTML = "";
+    return;
+  }
+
+  elements.profilePhoto.innerHTML = `
+    <div class="profile-photo-card">
+      <img src="${escapeHtml(photoSource)}" alt="${escapeHtml(politician.full_name || "Profilova fotografia")}" class="profile-photo-image" />
+    </div>
+  `;
+}
+
+function renderProfileContact(politician) {
+  const links = [];
+
+  if (politician?.deputy_email) {
+    links.push(`
+      <a class="profile-contact-link" href="mailto:${escapeHtml(politician.deputy_email)}">
+        ${escapeHtml(politician.deputy_email)}
+      </a>
+    `);
+  }
+
+  if (politician?.deputy_website) {
+    links.push(`
+      <a class="profile-contact-link" href="${escapeHtml(politician.deputy_website)}" target="_blank" rel="noreferrer">
+        Webstranka
+      </a>
+    `);
+  }
+
+  elements.profileContact.innerHTML = links.length
+    ? `<div class="profile-contact-card">${links.join("")}</div>`
+    : "";
 }
 
 function normalizeStructuredLabel(value) {
@@ -307,21 +355,170 @@ function renderSocialMediaIcons() {
 }
 
 function renderProfileMeta(politician) {
+  const candidatePartyList = Array.isArray(politician.candidate_party_memberships)
+    && politician.candidate_party_memberships.length
+    ? politician.candidate_party_memberships.join(" ; ")
+    : (politician.candidate_party || "-");
+
+  function normalizeNameParts(fullName) {
+    const raw = String(fullName || "").trim();
+    if (!raw) {
+      return { firstName: null, lastName: null };
+    }
+
+    const compact = raw
+      .replace(/,/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const filteredParts = compact
+      .split(" ")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .filter((part) => !part.includes("."));
+
+    if (filteredParts.length < 2) {
+      return { firstName: null, lastName: null };
+    }
+
+    return {
+      firstName: filteredParts[0],
+      lastName: filteredParts[filteredParts.length - 1],
+    };
+  }
+
+  function latin2PercentEncode(value) {
+    // Use ISO-8859-2 (Latin-2) mapping for Slovak diacritics in ORSR query params.
+    const ISO_8859_2_MAP = {
+      "Á": 0xC1,
+      "Ä": 0xC4,
+      "Č": 0xC8,
+      "Ď": 0xCF,
+      "É": 0xC9,
+      "Í": 0xCD,
+      "Ĺ": 0xC5,
+      "Ľ": 0xA5,
+      "Ň": 0xD2,
+      "Ó": 0xD3,
+      "Ô": 0xD4,
+      "Ŕ": 0xC0,
+      "Š": 0xA9,
+      "Ť": 0xAB,
+      "Ú": 0xDA,
+      "Ý": 0xDD,
+      "Ž": 0xAE,
+      "á": 0xE1,
+      "ä": 0xE4,
+      "č": 0xE8,
+      "ď": 0xEF,
+      "é": 0xE9,
+      "í": 0xED,
+      "ĺ": 0xE5,
+      "ľ": 0xB5,
+      "ň": 0xF2,
+      "ó": 0xF3,
+      "ô": 0xF4,
+      "ŕ": 0xE0,
+      "š": 0xB9,
+      "ť": 0xBB,
+      "ú": 0xFA,
+      "ý": 0xFD,
+      "ž": 0xBE,
+    };
+
+    const input = String(value || "");
+
+    let encoded = "";
+    for (const originalChar of input) {
+      let char = originalChar;
+      let code = ISO_8859_2_MAP[char];
+
+      if (code == null) {
+        code = char.charCodeAt(0);
+      }
+
+      if (code > 0xff) {
+        const fallback = char.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        char = fallback || char;
+        code = char.charCodeAt(0);
+      }
+
+      if (/[A-Za-z0-9_.~-]/.test(char)) {
+        encoded += char;
+        continue;
+      }
+
+      if (char === " ") {
+        encoded += "%20";
+        continue;
+      }
+
+      if (code <= 0xff) {
+        encoded += `%${code.toString(16).toUpperCase().padStart(2, "0")}`;
+        continue;
+      }
+
+      encoded += encodeURIComponent(char);
+    }
+
+    return encoded;
+  }
+
+  function buildOrsrUrl(fullName) {
+    const { firstName, lastName } = normalizeNameParts(fullName);
+    if (!firstName || !lastName) {
+      return null;
+    }
+
+    const encodedLastName = latin2PercentEncode(lastName.toLowerCase());
+    const encodedFirstName = latin2PercentEncode(firstName.toLowerCase());
+
+    return `https://www.orsr.sk/hladaj_osoba.asp?PR=${encodedLastName}&MENO=${encodedFirstName}&SID=0&T=f0&R=on`;
+  }
+
+  function buildProfileLinks() {
+    const links = [];
+    const orsrUrl = buildOrsrUrl(politician.full_name);
+    if (orsrUrl) {
+      links.push({ label: "ORSR", url: orsrUrl });
+    }
+
+    if (politician.deputy_profile_url) {
+      links.push({ label: "NR SR", url: politician.deputy_profile_url });
+    }
+
+    return links;
+  }
+
+  const profileLinks = buildProfileLinks();
+  const profileLinksMarkup = profileLinks.length
+    ? `<div class="profile-link-list">${profileLinks
+      .map((link) => `
+        <a class="table-link profile-link-button" href="${escapeHtml(link.url)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>
+      `)
+      .join("")}</div>`
+    : "-";
+
   const items = [
-    ["Kandidoval(a) za", politician.candidate_party || "-"],
+    ["Titul", politician.deputy_title || "-"],
+    ["Meno", politician.deputy_first_name || "-"],
+    ["Priezvisko", politician.deputy_last_name || "-"],
+    ["Kandidoval(a) za", candidatePartyList],
     ["Parlamentny klub", politician.parliamentary_club || "-"],
+    ["Narodeny(a)", politician.deputy_birth_date_text || "-"],
+    ["Narodnost", politician.deputy_nationality || "-"],
+    ["Bydlisko", politician.deputy_residence || "-"],
+    ["Kraj", politician.deputy_region || "-"],
+    ["Aktualne volebne obdobie", politician.deputy_term_info?.current_term_label || "-"],
+    ["Posobenie v parlamente", politician.deputy_term_info?.parliament_service || "-"],
+    ["Posobenie v tomto obdobi", politician.deputy_term_info?.current_term_service || "-"],
     [
       "Poslanecke clenstva",
       Array.isArray(politician.parliamentary_memberships) && politician.parliamentary_memberships.length
         ? politician.parliamentary_memberships.join(" | ")
         : "-",
     ],
-    [
-      "Profil NR SR",
-      politician.deputy_profile_url
-        ? `<a href="${escapeHtml(politician.deputy_profile_url)}" target="_blank" rel="noreferrer">otvorit profil</a>`
-        : "-",
-    ],
+    ["Profily", profileLinksMarkup],
   ];
 
   elements.profileMeta.innerHTML = items.map(([label, value]) => `
@@ -361,16 +558,7 @@ function renderRiskSummary(riskAnalysis) {
       <strong>${escapeHtml(value)}</strong>
     </div>
   `).join("");
-
-  const notes = [
-    "Vzorec: ((tento rok plat / tento rok prijmy) / (minuly rok plat / minuly rok prijmy)) + (assety tento rok / assety minuly rok) + (ine prijmy / priemerna slovenska mzda).",
-  ];
-
-  if (!riskAnalysis?.previous_declaration_id) {
-    notes.push("Chyba predchadzajuce priznanie, takze medzirocne pomery mozu byt prazdne.");
-  }
-
-  elements.riskFlags.innerHTML = notes.map((note) => `<div class="risk-flag">${escapeHtml(note)}</div>`).join("");
+  elements.riskFlags.innerHTML = "";
 }
 
 function buildMockTimeline(activeDeclaration) {
@@ -495,6 +683,8 @@ function renderDeclarationOptions(declarations, activeId) {
 
 function renderEmpty() {
   elements.detailSubtitle.textContent = "Pre tohto politika zatial nie je ulozene priznanie.";
+  elements.profilePhoto.innerHTML = "";
+  elements.profileContact.innerHTML = "";
   elements.profileMeta.innerHTML = "";
   elements.summaryList.innerHTML = "";
   elements.timelineContainer.innerHTML = "";
@@ -522,6 +712,8 @@ async function loadDetail(declarationId) {
   const { politician, declarations, activeDeclaration, timeline, riskAnalysis } = payload.detail;
   elements.detailTitle.textContent = politician.full_name || politician.nrsr_user_id;
   elements.detailSubtitle.textContent = `${politician.nrsr_user_id} | ${declarations.length} priznani v databaze`;
+  renderProfilePhoto(politician);
+  renderProfileContact(politician);
   renderProfileMeta(politician);
   renderRiskSummary(riskAnalysis);
 
@@ -538,6 +730,8 @@ async function loadDetail(declarationId) {
 
 function renderError(error) {
   elements.detailSubtitle.textContent = "Chyba pri nacitani detailu";
+  elements.profilePhoto.innerHTML = "";
+  elements.profileContact.innerHTML = "";
   elements.profileMeta.innerHTML = "";
   elements.summaryList.innerHTML = `<div class="error-box">${escapeHtml(error.message)}</div>`;
   elements.timelineContainer.innerHTML = "";

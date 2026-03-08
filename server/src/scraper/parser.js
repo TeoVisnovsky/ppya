@@ -260,15 +260,98 @@ function parseVotingResultRow($, row, sourceUrl) {
   };
 }
 
+function extractDeputyFieldValue($, strong, sourceUrl) {
+  const span = $(strong).nextAll("span").first();
+  if (!span.length) {
+    return null;
+  }
+
+  const anchor = span.find("a").first();
+  const text = cleanText(span.text());
+  const href = anchor.attr("href") || null;
+
+  return {
+    text: text || null,
+    href: href
+      ? (/^(?:mailto:|https?:|\/)/i.test(href) ? getAbsoluteUrl(sourceUrl, href) : href)
+      : null,
+  };
+}
+
+function parseSlovakDate(value) {
+  const match = String(value || "").match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
+  if (!match) {
+    return null;
+  }
+
+  const [, day, month, year] = match;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function splitCandidatePartyMemberships(value) {
+  const normalized = cleanText(String(value || "")).replace(/\s*;\s*/g, "; ");
+  if (!normalized) {
+    return [];
+  }
+
+  const splitByCoalitionTail = (item) => {
+    const cleaned = cleanText(item);
+    if (!cleaned || !/\sa\s/.test(cleaned) || cleaned.includes(":")) {
+      return [cleaned];
+    }
+
+    const parts = cleaned
+      .split(/\s+a\s+/)
+      .map((part) => cleanText(part))
+      .filter(Boolean);
+
+    return parts.length > 1 ? parts : [cleaned];
+  };
+
+  return normalized
+    .split(/\s*[,;]\s*/)
+    .flatMap(splitByCoalitionTail)
+    .filter(Boolean);
+}
+
+function extractDeputyPhotoUrl($, sourceUrl) {
+  const image = $(".mp_foto img").first();
+  const src = image.attr("src");
+  if (!src) {
+    return null;
+  }
+
+  return getAbsoluteUrl(sourceUrl, src);
+}
+
+function buildDeputyTermInfo(cisObdobia) {
+  const numericPeriod = Number(cisObdobia);
+  if (!Number.isFinite(numericPeriod)) {
+    return {};
+  }
+
+  return {
+    current_term_number: numericPeriod,
+    current_term_label: `${numericPeriod}. volebne obdobie`,
+    parliament_service: null,
+    current_term_service: null,
+  };
+}
+
 export function parseDeputyProfileHtml({ html, sourceUrl, poslanecId, cisObdobia }) {
   const $ = cheerio.load(html);
   const personalData = {};
+  const personalDataLinks = {};
 
   $(".mp_personal_data strong").each((_, strong) => {
     const label = normalizeFieldLabel($(strong).text());
-    const value = cleanText($(strong).next("span").text());
+    const extracted = extractDeputyFieldValue($, strong, sourceUrl);
+    const value = extracted?.text || null;
     if (label) {
       personalData[label] = value || null;
+      if (extracted?.href) {
+        personalDataLinks[label] = extracted.href;
+      }
     }
   });
 
@@ -292,16 +375,164 @@ export function parseDeputyProfileHtml({ html, sourceUrl, poslanecId, cisObdobia
 
   const fullName = cleanText(title.text()) || null;
   const parliamentaryClub = memberships.find((item) => /^Klub\s+/i.test(item)) || null;
+  const candidatePartyRaw = personalData["Kandidoval(a) za"] || null;
+  const candidatePartyMemberships = splitCandidatePartyMemberships(candidatePartyRaw);
+  const photoUrl = extractDeputyPhotoUrl($, sourceUrl);
+  const termInfo = buildDeputyTermInfo(cisObdobia);
 
   return {
     poslanecId,
     cisObdobia,
     fullName,
     sourceUrl,
-    candidateParty: personalData["Kandidoval(a) za"] || null,
+    candidateParty: candidatePartyMemberships.length ? candidatePartyMemberships.join("; ") : candidatePartyRaw,
+    candidatePartyMemberships,
+    photoUrl,
+    termInfo,
     parliamentaryClub: parliamentaryClub ? parliamentaryClub.replace(/^Klub\s+/i, "").trim() : null,
     memberships,
+    title: personalData.Titul || null,
+    firstName: personalData.Meno || null,
+    lastName: personalData.Priezvisko || null,
+    birthDate: parseSlovakDate(personalData["Narodený(á)"] || personalData["Narodeny(a)"] || null),
+    birthDateText: personalData["Narodený(á)"] || personalData["Narodeny(a)"] || null,
+    nationality: personalData.Národnosť || personalData.Narodnost || null,
+    residence: personalData.Bydlisko || null,
+    region: personalData.Kraj || null,
+    email: personalData["E-mail"] || null,
+    website: personalDataLinks.WWW || personalData.WWW || null,
     personalData,
+  };
+}
+
+function cleanDeputyNameCell($, cell) {
+  const clone = $(cell).clone();
+  clone.find("a").remove();
+  const remainder = cleanText(clone.text());
+  const partyMatch = remainder.match(/^\((.*)\)$/);
+
+  return {
+    partyLabel: partyMatch?.[1] || null,
+  };
+}
+
+function isActiveMandateStatus(value) {
+  return /mand[aá]t(?:\s+n[aá]hradn[ií]ka)?\s+vykon[aá]van/i.test(value);
+}
+
+function isInactiveMandateStatus(value) {
+  return /mand[aá]t\s+zaniknut|mand[aá]t\s+sa\s+neuplatňuje/i.test(value);
+}
+
+function formatServiceRange(startText, endText) {
+  if (startText && endText) {
+    return `${startText} - ${endText}`;
+  }
+
+  if (startText) {
+    return `od ${startText}`;
+  }
+
+  return null;
+}
+
+export function buildTermInfoFromMandateChanges(baseTermInfo = {}, mandateChanges = []) {
+  const sorted = [...(mandateChanges || [])]
+    .filter((row) => row.date_iso || row.date_text)
+    .sort((left, right) => {
+      const leftDate = left.date_iso || "";
+      const rightDate = right.date_iso || "";
+      return leftDate.localeCompare(rightDate);
+    });
+
+  let currentTermStart = null;
+  let currentTermStartText = null;
+  let currentTermStartReason = null;
+  let currentTermEnd = null;
+  let currentTermEndText = null;
+  let currentTermEndReason = null;
+
+  for (const change of sorted) {
+    if (isActiveMandateStatus(change.status || "")) {
+      currentTermStart = change.date_iso || currentTermStart;
+      currentTermStartText = change.date_text || currentTermStartText;
+      currentTermStartReason = change.reason || currentTermStartReason;
+      currentTermEnd = null;
+      currentTermEndText = null;
+      currentTermEndReason = null;
+      continue;
+    }
+
+    if (isInactiveMandateStatus(change.status || "")) {
+      currentTermEnd = change.date_iso || currentTermEnd;
+      currentTermEndText = change.date_text || currentTermEndText;
+      currentTermEndReason = change.reason || currentTermEndReason;
+    }
+  }
+
+  return {
+    ...baseTermInfo,
+    source_page: "https://www.nrsr.sk/web/?sid=poslanci/zmeny",
+    current_term_start_date: currentTermStart,
+    current_term_end_date: currentTermEnd,
+    current_term_start_reason: currentTermStartReason,
+    current_term_end_reason: currentTermEndReason,
+    current_term_service: formatServiceRange(currentTermStartText, currentTermEndText),
+    parliament_service: null,
+    mandate_changes_count: sorted.length,
+  };
+}
+
+export function parseDeputyChangesHtml({ html, sourceUrl, pageNumber }) {
+  const $ = cheerio.load(html);
+  const table = $("#_sectionLayoutContainer_ctl01__ResultGrid2, #_sectionLayoutContainer_ctl01__resultGrid2").first();
+
+  if (table.length === 0) {
+    return null;
+  }
+
+  const rows = [];
+  table.find("tr.tab_zoznam_nonalt, tr.tab_zoznam_alt").each((_, row) => {
+    const cells = $(row).children("td");
+    if (cells.length < 4) {
+      return;
+    }
+
+    const anchor = $(cells[1]).find("a").first();
+    const href = anchor.attr("href");
+    const absoluteUrl = href ? getAbsoluteUrl(sourceUrl, href) : null;
+    const url = absoluteUrl ? new URL(absoluteUrl) : null;
+    const poslanecId = Number(url?.searchParams.get("PoslanecID"));
+    const cisObdobia = Number(url?.searchParams.get("CisObdobia"));
+    const dateText = cleanText($(cells[0]).text()) || null;
+    const cellDetails = cleanDeputyNameCell($, cells[1]);
+
+    rows.push({
+      page_number: pageNumber,
+      date_text: dateText,
+      date_iso: parseSlovakDate(dateText),
+      politician_name: cleanText(anchor.text()) || null,
+      poslanecId: Number.isFinite(poslanecId) ? poslanecId : null,
+      cisObdobia: Number.isFinite(cisObdobia) ? cisObdobia : null,
+      profile_url: absoluteUrl,
+      party_label: cellDetails.partyLabel,
+      status: cleanText($(cells[2]).text()) || null,
+      reason: cleanText($(cells[3]).text()) || null,
+    });
+  });
+
+  const pager = [];
+  table.find("tr.pager a[href*='__doPostBack']").each((_, link) => {
+    const parsed = parsePostBackHref($(link).attr("href"));
+    if (parsed) {
+      pager.push(parsed);
+    }
+  });
+
+  return {
+    pageNumber,
+    rows,
+    pager,
   };
 }
 

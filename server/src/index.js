@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { config } from "./config.js";
+import { registerChatbotRoutes } from "./chatbot/routes.js";
 import { runMigrations } from "./db/migrate.js";
 import {
   getPoliticianDetail,
@@ -23,6 +24,8 @@ const clientDir = path.resolve(__dirname, "../../client");
 const app = express();
 app.use(express.json());
 app.use(express.static(clientDir));
+
+registerChatbotRoutes(app);
 
 function getErrorMessage(error) {
   if (error?.code === "SELF_SIGNED_CERT_IN_CHAIN") {
@@ -240,6 +243,10 @@ app.get("*", (req, res, next) => {
 
   if (req.path === "/voting" || req.path === "/voting.html") {
     return res.sendFile(path.join(clientDir, "voting.html"));
+  }
+
+  if (req.path === "/chatbot" || req.path === "/chatbot.html") {
+    return res.sendFile(path.join(clientDir, "chatbot.html"));
   }
 
   return res.sendFile(path.join(clientDir, "index.html"));
