@@ -7,10 +7,12 @@ const elements = {
   detailSubtitle: document.querySelector("#detailSubtitle"),
   declarationSelect: document.querySelector("#declarationSelect"),
   profileMeta: document.querySelector("#profileMeta"),
-  riskSummary: document.querySelector("#riskSummary"),
-  riskFlags: document.querySelector("#riskFlags"),
   summaryList: document.querySelector("#summaryList"),
   timelineContainer: document.querySelector("#timelineContainer"),
+  realEstateContainer: document.querySelector("#realEstateContainer"),
+  movableAssetsContainer: document.querySelector("#movableAssetsContainer"),
+  riskSummary: document.querySelector("#riskSummary"),
+  riskFlags: document.querySelector("#riskFlags"),
   categoriesContainer: document.querySelector("#categoriesContainer"),
 };
 
@@ -127,6 +129,36 @@ function renderStructuredCategoryTable(categoryKey, items) {
   `;
 }
 
+function renderCategoryCard(categoryKey, category) {
+  if (!category?.items?.length) {
+    return `
+      <article class="category-card category-card-empty">
+        <h3>${escapeHtml(category?.label || "Bez nazvu")}</h3>
+        <p class="category-empty">Bez zaznamu.</p>
+      </article>
+    `;
+  }
+
+  const structuredTable = renderStructuredCategoryTable(categoryKey, category.items);
+  if (structuredTable) {
+    return `
+      <article class="category-card category-card-structured">
+        <h3>${escapeHtml(category.label)}</h3>
+        ${structuredTable}
+      </article>
+    `;
+  }
+
+  return `
+    <article class="category-card">
+      <h3>${escapeHtml(category.label)}</h3>
+      <ul>
+        ${category.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+      </ul>
+    </article>
+  `;
+}
+
 function renderSummary(activeDeclaration) {
   const items = [
     ["Interne cislo", escapeHtml(activeDeclaration.internal_number || "-"), false],
@@ -225,76 +257,111 @@ function renderRiskSummary(riskAnalysis) {
   elements.riskFlags.innerHTML = flags.map((flag) => `<div class="risk-flag">${escapeHtml(flag)}</div>`).join("");
 }
 
-function renderTimeline(timeline) {
-  if (!Array.isArray(timeline) || !timeline.length) {
-    elements.timelineContainer.innerHTML = '<div class="error-box">Nie je k dispozicii historia vyvoja.</div>';
-    return;
-  }
+function buildMockTimeline(activeDeclaration) {
+  const referenceYear = Number(activeDeclaration?.declaration_year) || new Date().getFullYear();
+  const baseAssets = Math.max(Number(activeDeclaration?.asset_item_count) || 8, 8);
+  const baseIncome = Math.max(Number(activeDeclaration?.total_income_amount) || 48000, 48000);
+  const series = [0.72, 0.86, 1].map((multiplier, index) => {
+    const year = referenceYear - (2 - index);
+    return {
+      year,
+      assetIndex: Math.round(baseAssets * multiplier),
+      incomeIndex: Math.round(baseIncome * multiplier),
+    };
+  });
+
+  return series;
+}
+
+function renderMockTimelineChart(activeDeclaration) {
+  const series = buildMockTimeline(activeDeclaration);
+  const maxIncome = Math.max(...series.map((point) => point.incomeIndex), 1);
+  const stepX = 130;
+  const baseY = 164;
+  const maxHeight = 110;
+  const points = series
+    .map((point, index) => {
+      const x = 48 + (index * stepX);
+      const y = baseY - ((point.incomeIndex / maxIncome) * maxHeight);
+      return { ...point, x, y: Number(y.toFixed(1)) };
+    });
+
+  const polyline = points.map((point) => `${point.x},${point.y}`).join(" ");
 
   elements.timelineContainer.innerHTML = `
-    <table class="detail-category-table">
-      <thead>
-        <tr>
-          <th>Rok</th>
-          <th>Funkcia</th>
-          <th>Plat z funkcie</th>
-          <th>Ine prijmy</th>
-          <th>Prijmy spolu</th>
-          <th>Majetkove polozky</th>
-          <th>Vedlajsie aktivity</th>
-          <th>Ine prijmy / priemerna mzda</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${timeline.map((entry) => `
-          <tr>
-            <td>${escapeHtml(entry.declaration_year || "-")}</td>
-            <td>${escapeHtml(entry.public_function || "-")}</td>
-            <td>${escapeHtml(entry.public_function_income_amount ?? 0)}</td>
-            <td>${escapeHtml(entry.other_income_amount ?? 0)}</td>
-            <td>${escapeHtml(entry.total_income_amount ?? 0)}</td>
-            <td>${escapeHtml(entry.asset_item_count ?? 0)}</td>
-            <td>${escapeHtml(entry.side_job_count ?? 0)}</td>
-            <td>${escapeHtml(entry.other_income_to_average_salary_ratio ?? "-")}</td>
-          </tr>
+    <div class="mock-chart-card">
+      <div class="mock-chart-copy">
+        <p class="mock-chart-kicker">Mock preview</p>
+        <h3>Posledne tri roky</h3>
+        <p class="mock-chart-disclaimer">Tento graf je ilustračny a nezobrazuje realne historicke data.</p>
+      </div>
+      <div class="mock-chart-stage">
+        <svg class="mock-chart-svg" viewBox="0 0 360 210" role="img" aria-label="Mock graf poslednych troch rokov">
+          <defs>
+            <linearGradient id="mock-line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="rgba(255,255,255,0.55)" />
+              <stop offset="100%" stop-color="rgba(255,255,255,0.95)" />
+            </linearGradient>
+          </defs>
+          <line x1="30" y1="164" x2="330" y2="164" class="mock-chart-axis" />
+          <line x1="30" y1="50" x2="30" y2="164" class="mock-chart-axis" />
+          <polyline points="${polyline}" class="mock-chart-line" />
+          ${points.map((point) => `
+            <g>
+              <line x1="${point.x}" y1="${point.y}" x2="${point.x}" y2="164" class="mock-chart-guide" />
+              <circle cx="${point.x}" cy="${point.y}" r="6" class="mock-chart-point" />
+              <text x="${point.x}" y="186" text-anchor="middle" class="mock-chart-label">${escapeHtml(point.year)}</text>
+            </g>
+          `).join("")}
+        </svg>
+      </div>
+      <div class="mock-chart-metrics">
+        ${series.map((point) => `
+          <div class="mock-chart-metric">
+            <span>${escapeHtml(point.year)}</span>
+            <strong>${escapeHtml(point.assetIndex)} poloziek</strong>
+            <small>Mock prijmy ${escapeHtml(point.incomeIndex.toLocaleString("sk-SK"))} EUR</small>
+          </div>
         `).join("")}
-      </tbody>
-    </table>
+      </div>
+    </div>
   `;
 }
 
 function renderCategories(activeDeclaration) {
-  const cards = Object.entries(activeDeclaration.categories).map(([categoryKey, category]) => {
-    if (!category.items.length) {
-      return `
-        <article class="category-card">
-          <h3>${escapeHtml(category.label)}</h3>
-          <p class="category-empty">Bez zaznamu.</p>
-        </article>
-      `;
-    }
+  const categories = activeDeclaration?.categories || {};
+  const realEstateCategory = categories.realEstate || {
+    label: "Vlastnictvo nehnutelnej veci",
+    items: [],
+  };
+  const movableAssetsCategory = categories.movableAssets || {
+    label: "Vlastnictvo hnutelnej veci",
+    items: [],
+  };
 
-    const structuredTable = renderStructuredCategoryTable(categoryKey, category.items);
-    if (structuredTable) {
-      return `
-        <article class="category-card">
-          <h3>${escapeHtml(category.label)}</h3>
-          ${structuredTable}
-        </article>
-      `;
-    }
+  elements.realEstateContainer.innerHTML = renderCategoryCard("realEstate", realEstateCategory);
+  elements.movableAssetsContainer.innerHTML = renderCategoryCard("movableAssets", movableAssetsCategory);
 
-    return `
-      <article class="category-card">
-        <h3>${escapeHtml(category.label)}</h3>
-        <ul>
-          ${category.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-        </ul>
-      </article>
-    `;
-  });
+  const orderedOtherKeys = [
+    "propertyRights",
+    "liabilities",
+    "income",
+    "businessActivities",
+    "employment",
+    "publicFunctionsDuringTerm",
+    "usageRealEstate",
+    "usageMovableAssets",
+    "giftsOrBenefits",
+    "incompatibilityConditions",
+  ];
 
-  elements.categoriesContainer.innerHTML = cards.join("");
+  const remainingCards = orderedOtherKeys
+    .filter((categoryKey) => categories[categoryKey])
+    .map((categoryKey) => renderCategoryCard(categoryKey, categories[categoryKey]));
+
+  elements.categoriesContainer.innerHTML = remainingCards.length
+    ? remainingCards.join("")
+    : '<div class="error-box">Zatial nie su k dispozicii dalsie kategorie.</div>';
 }
 
 function renderDeclarationOptions(declarations, activeId) {
@@ -312,10 +379,12 @@ function renderDeclarationOptions(declarations, activeId) {
 function renderEmpty() {
   elements.detailSubtitle.textContent = "Pre tohto politika zatial nie je ulozene priznanie.";
   elements.profileMeta.innerHTML = "";
-  elements.riskSummary.innerHTML = "";
-  elements.riskFlags.innerHTML = "";
   elements.summaryList.innerHTML = "";
   elements.timelineContainer.innerHTML = "";
+  elements.realEstateContainer.innerHTML = '<div class="error-box">Zatial nie su k dispozicii ziadne data.</div>';
+  elements.movableAssetsContainer.innerHTML = '<div class="error-box">Zatial nie su k dispozicii ziadne data.</div>';
+  elements.riskSummary.innerHTML = "";
+  elements.riskFlags.innerHTML = "";
   elements.categoriesContainer.innerHTML = '<div class="error-box">Zatial nie su k dispozicii ziadne data.</div>';
   elements.declarationSelect.innerHTML = "";
 }
@@ -338,7 +407,6 @@ async function loadDetail(declarationId) {
   elements.detailSubtitle.textContent = `${politician.nrsr_user_id} | ${declarations.length} priznani v databaze`;
   renderProfileMeta(politician);
   renderRiskSummary(riskAnalysis);
-  renderTimeline(timeline);
 
   if (!activeDeclaration) {
     renderEmpty();
@@ -347,16 +415,19 @@ async function loadDetail(declarationId) {
 
   renderDeclarationOptions(declarations, activeDeclaration.id);
   renderSummary(activeDeclaration);
+  renderMockTimelineChart(activeDeclaration, timeline);
   renderCategories(activeDeclaration);
 }
 
 function renderError(error) {
   elements.detailSubtitle.textContent = "Chyba pri nacitani detailu";
   elements.profileMeta.innerHTML = "";
-  elements.riskSummary.innerHTML = "";
-  elements.riskFlags.innerHTML = "";
   elements.summaryList.innerHTML = `<div class="error-box">${escapeHtml(error.message)}</div>`;
   elements.timelineContainer.innerHTML = "";
+  elements.realEstateContainer.innerHTML = "";
+  elements.movableAssetsContainer.innerHTML = "";
+  elements.riskSummary.innerHTML = "";
+  elements.riskFlags.innerHTML = "";
   elements.categoriesContainer.innerHTML = "";
 }
 

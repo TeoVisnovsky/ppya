@@ -53,36 +53,67 @@
         </div>
       </header>
 
-      <main class="detail-layout">
-        <section class="panel risk-panel">
-          <div class="panel-header">
-            <h2>Profil a riziko</h2>
-          </div>
-          <dl id="profileMeta" class="summary-list"></dl>
-          <div id="riskSummary" class="risk-summary"></div>
-          <div id="riskFlags" class="risk-flags"></div>
-        </section>
+      <main class="detail-dashboard">
+        <div class="detail-column detail-column-left">
+          <section class="panel detail-window info-window">
+            <div class="panel-header">
+              <h2>Zakladne info</h2>
+              <p>Profil politika a vybrane udaje z aktivneho priznania.</p>
+            </div>
+            <div class="info-window-stack">
+              <div>
+                <h3 class="subsection-title">Profil</h3>
+                <dl id="profileMeta" class="summary-list"></dl>
+              </div>
+              <div>
+                <h3 class="subsection-title">Aktivne priznanie</h3>
+                <dl id="summaryList" class="summary-list"></dl>
+              </div>
+            </div>
+          </section>
 
-        <section class="panel summary-panel">
-          <div class="panel-header">
-            <h2>Zakladne info</h2>
-          </div>
-          <dl id="summaryList" class="summary-list"></dl>
-        </section>
+          <section class="panel detail-window risk-window">
+            <div class="panel-header">
+              <h2>Riziko a signaly</h2>
+            </div>
+            <div id="riskSummary" class="risk-summary"></div>
+            <div id="riskFlags" class="risk-flags"></div>
+          </section>
+        </div>
 
-        <section class="panel timeline-panel">
-          <div class="panel-header">
-            <h2>Vyvoj v case</h2>
-          </div>
-          <div id="timelineContainer" class="detail-table-wrap"></div>
-        </section>
+        <div class="detail-column detail-column-right">
+          <section class="panel detail-window chart-window">
+            <div class="panel-header">
+              <h2>Vyvoj v case</h2>
+              <p class="mock-note">Tento graf je iba mockdata a nie je realny.</p>
+            </div>
+            <div id="timelineContainer" class="detail-table-wrap"></div>
+          </section>
 
-        <section class="panel categories-panel">
-          <div class="panel-header">
-            <h2>Kategorie</h2>
+          <div class="assets-row">
+            <section class="panel detail-window real-estate-window">
+              <div class="panel-header">
+                <h2>Nehnutelnosti</h2>
+              </div>
+              <div id="realEstateContainer" class="window-scroll-area"></div>
+            </section>
+
+            <section class="panel detail-window movable-window">
+              <div class="panel-header">
+                <h2>Hnutelnosti</h2>
+              </div>
+              <div id="movableAssetsContainer" class="window-scroll-area"></div>
+            </section>
           </div>
-          <div id="categoriesContainer" class="categories-grid"></div>
-        </section>
+
+          <section class="panel detail-window categories-window">
+            <div class="panel-header">
+              <h2>Ostatne kategorie</h2>
+              <p>Ostatne polozky z priznania usporiadane do samostatnych kariet.</p>
+            </div>
+            <div id="categoriesContainer" class="categories-grid window-scroll-area"></div>
+          </section>
+        </div>
       </main>
     </div>
 
