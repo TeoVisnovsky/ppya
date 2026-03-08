@@ -35,16 +35,9 @@ function safeRatio(numerator, denominator) {
   return left / right;
 }
 
-function absoluteChange(current, previous) {
-  if (!Number.isFinite(current) || !Number.isFinite(previous)) {
-    return null;
-  }
-
-  return current - previous;
-}
-
-function formatRatio(value) {
-  return value == null ? null : round(value, 2);
+function formatRatio(value, decimals = 2) {
+  const numericValue = toNumber(value);
+  return numericValue == null ? null : round(numericValue, decimals);
 }
 
 function deduplicateStrings(values) {
@@ -108,148 +101,42 @@ export function buildTimelineEntry(rawEntry) {
   };
 }
 
-function classifySuspicion(score) {
+export function classifyRiskFactor(score) {
   if (!Number.isFinite(score) || score <= 0) {
     return "none";
   }
 
-  if (score >= 70) {
+  if (score >= 4) {
     return "high";
   }
 
-  if (score >= 40) {
+  if (score >= 2) {
     return "medium";
   }
 
   return "low";
 }
 
-export function buildRiskAnalysisFromTimeline(entries) {
-  const timeline = (entries || []).map(buildTimelineEntry);
-  const current = timeline[0] || null;
-  const previous = timeline[1] || null;
-
-  if (!current) {
-    return {
-      suspicious_score: 0,
-      suspicious_level: "none",
-      flags: [],
-      coefficients: {},
-      timeline,
-    };
-  }
-
-  const flags = [];
-  let score = 0;
-
-  const currentSalaryToIncomeRatio = current.salary_to_income_ratio;
-  const previousSalaryToIncomeRatio = previous?.salary_to_income_ratio ?? null;
-  const salaryRatioDelta = absoluteChange(currentSalaryToIncomeRatio, previousSalaryToIncomeRatio);
-  const salaryRatioChange = formatRatio(safeRatio(currentSalaryToIncomeRatio, previousSalaryToIncomeRatio));
-  const assetItemCountRatio = formatRatio(safeRatio(current.asset_item_count, previous?.asset_item_count));
-  const totalIncomeGrowthRatio = formatRatio(safeRatio(current.total_income_amount, previous?.total_income_amount));
-  const otherIncomeGrowthRatio = formatRatio(safeRatio(current.other_income_amount, previous?.other_income_amount));
-  const otherIncomeToAverageSalaryRatio = current.other_income_to_average_salary_ratio;
-  const otherIncomeShare = current.other_income_share;
-
-  if (otherIncomeToAverageSalaryRatio != null && otherIncomeToAverageSalaryRatio >= 2) {
-    score += 35;
-    flags.push("Ine prijmy presahuju dvojnasobok priemernej rocnej mzdy.");
-  } else if (otherIncomeToAverageSalaryRatio != null && otherIncomeToAverageSalaryRatio >= 1) {
-    score += 20;
-    flags.push("Ine prijmy su aspon na urovni priemernej rocnej mzdy.");
-  }
-
-  if (Math.abs(salaryRatioDelta || 0) >= 0.35) {
-    score += 20;
-    flags.push("Podiel platu z verejnej funkcie na celkovych prijmoch sa prudko zmenil oproti minulemu roku.");
-  } else if (Math.abs(salaryRatioDelta || 0) >= 0.2) {
-    score += 10;
-    flags.push("Podiel platu z verejnej funkcie na celkovych prijmoch sa citelne zmenil.");
-  }
-
-  if (totalIncomeGrowthRatio != null && (totalIncomeGrowthRatio >= 2 || totalIncomeGrowthRatio <= 0.5)) {
-    score += 18;
-    flags.push("Celkove prijmy medzi rokmi prudko vzrastli alebo klesli.");
-  }
-
-  if (
-    assetItemCountRatio != null
-    && Math.max(current.asset_item_count || 0, previous?.asset_item_count || 0) >= 3
-    && (assetItemCountRatio >= 2 || assetItemCountRatio <= 0.5)
-  ) {
-    score += 15;
-    flags.push("Pocet majetkovych poloziek sa medzi rokmi vyrazne zmenil.");
-  }
-
-  if (otherIncomeShare != null && otherIncomeShare >= 0.5) {
-    score += 15;
-    flags.push("Vacsinu priznanych prijmov tvoria ine prijmy.");
-  }
-
-  if ((current.side_job_count || 0) > 0 && (otherIncomeToAverageSalaryRatio || 0) >= 1) {
-    score += 10;
-    flags.push("Politik ma vedlajsie aktivity a sucasne vysoke ine prijmy.");
-  }
-
-  if (current.side_job_count >= 4) {
-    score += 5;
-    flags.push("Politik vykazuje vacsi pocet vedlajsich aktivit alebo funkcii.");
-  }
-
-  score = Math.min(score, 100);
+export function buildRiskAnalysis(rawRiskRow, timeline = []) {
+  const riskFactor = formatRatio(rawRiskRow?.risk_factor, 4) ?? 0;
 
   return {
-    suspicious_score: score,
-    suspicious_level: classifySuspicion(score),
-    flags,
+    risk_factor: riskFactor,
+    risk_level: rawRiskRow?.risk_level || classifyRiskFactor(riskFactor),
+    latest_declaration_id: rawRiskRow?.latest_declaration_id ?? null,
+    previous_declaration_id: rawRiskRow?.previous_declaration_id ?? null,
+    current_asset_item_count: toNumber(rawRiskRow?.current_asset_item_count) ?? 0,
+    previous_asset_item_count: toNumber(rawRiskRow?.previous_asset_item_count) ?? 0,
+    other_income_amount: toNumber(rawRiskRow?.other_income_amount),
+    average_slovak_annual_salary: toNumber(rawRiskRow?.average_slovak_annual_salary),
     coefficients: {
-      current_salary_to_income_ratio: currentSalaryToIncomeRatio,
-      previous_salary_to_income_ratio: previousSalaryToIncomeRatio,
-      salary_to_income_ratio_change: salaryRatioChange,
-      salary_to_income_ratio_delta: formatRatio(salaryRatioDelta),
-      asset_item_count_ratio: assetItemCountRatio,
-      total_income_growth_ratio: totalIncomeGrowthRatio,
-      other_income_growth_ratio: otherIncomeGrowthRatio,
-      other_income_to_average_salary_ratio: otherIncomeToAverageSalaryRatio,
+      current_salary_to_income_ratio: formatRatio(rawRiskRow?.current_salary_to_income_ratio, 4),
+      previous_salary_to_income_ratio: formatRatio(rawRiskRow?.previous_salary_to_income_ratio, 4),
+      salary_to_income_change_ratio: formatRatio(rawRiskRow?.salary_to_income_change_ratio, 4),
+      asset_item_count_ratio: formatRatio(rawRiskRow?.asset_item_count_ratio, 4),
+      other_income_to_average_salary_ratio: formatRatio(rawRiskRow?.other_income_to_average_salary_ratio, 4),
     },
     timeline,
-  };
-}
-
-export function buildListRiskSummary(rawRow) {
-  const current = buildTimelineEntry({
-    declaration_id: rawRow.latest_declaration_id,
-    declaration_year: rawRow.latest_declaration_year,
-    public_function: rawRow.latest_public_function,
-    public_function_income_amount: rawRow.latest_public_function_income_amount,
-    other_income_amount: rawRow.latest_other_income_amount,
-    total_income_amount: rawRow.latest_total_income_amount,
-    asset_item_count: rawRow.wealth_item_count,
-    employment_count: rawRow.latest_employment_count,
-    business_activity_count: rawRow.latest_business_activity_count,
-    public_function_role_count: rawRow.latest_public_function_role_count,
-  });
-  const previous = rawRow.previous_declaration_id
-    ? buildTimelineEntry({
-      declaration_id: rawRow.previous_declaration_id,
-      declaration_year: rawRow.previous_declaration_year,
-      public_function: rawRow.previous_public_function,
-      public_function_income_amount: rawRow.previous_public_function_income_amount,
-      other_income_amount: rawRow.previous_other_income_amount,
-      total_income_amount: rawRow.previous_total_income_amount,
-      asset_item_count: rawRow.previous_wealth_item_count,
-      employment_count: rawRow.previous_employment_count,
-      business_activity_count: rawRow.previous_business_activity_count,
-      public_function_role_count: rawRow.previous_public_function_role_count,
-    })
-    : null;
-
-  const risk = buildRiskAnalysisFromTimeline(previous ? [current, previous] : [current]);
-
-  return {
-    ...risk,
-    flags_count: risk.flags.length,
   };
 }
 

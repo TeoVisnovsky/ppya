@@ -8,6 +8,7 @@
     "migrate": "node src/db/migrate.js",
     "migrate:all": "node src/db/migrateAll.js",
     "scrape": "node src/scraper/nrsrScraper.js",
+    "scrape:profiles": "node src/scraper/nrsrDeputyProfileSync.js",
     "scrape:voting": "node src/scraper/nrsrVotingScraper.js"
   },
   "dependencies": {

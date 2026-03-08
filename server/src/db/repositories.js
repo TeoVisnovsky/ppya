@@ -1,8 +1,7 @@
 import crypto from "node:crypto";
 import {
   buildActiveSideJobs,
-  buildListRiskSummary,
-  buildRiskAnalysisFromTimeline,
+  buildRiskAnalysis,
   buildTimelineEntry,
 } from "../analysis/politicianRisk.js";
 import { pool } from "./pool.js";
@@ -35,8 +34,243 @@ const CATEGORY_LABELS = {
   voting: "Hlasovanie",
 };
 
+const AVERAGE_SALARY_VALUES_SQL = `
+        (2018, 12216),
+        (2019, 13104),
+        (2020, 13632),
+        (2021, 14592),
+        (2022, 15708),
+        (2023, 17280),
+        (2024, 18396),
+        (2025, 19296),
+        (2026, 20208)
+`;
+
+const POLITICIAN_RISK_FACTOR_UPSERT_SQL = `
+  WITH salary_reference (declaration_year, average_annual_salary) AS (
+    VALUES
+${AVERAGE_SALARY_VALUES_SQL}
+  ),
+  base AS (
+    SELECT
+      p.id AS politician_id,
+      latest.id AS latest_declaration_id,
+      previous.id AS previous_declaration_id,
+      latest.declaration_year AS latest_declaration_year,
+      COALESCE(latest_income.public_function_income_amount, 0)::NUMERIC AS latest_public_function_income_amount,
+      COALESCE(latest_income.other_income_amount, 0)::NUMERIC AS latest_other_income_amount,
+      COALESCE(latest_income.total_income_amount, 0)::NUMERIC AS latest_total_income_amount,
+      COALESCE(previous_income.public_function_income_amount, 0)::NUMERIC AS previous_public_function_income_amount,
+      COALESCE(previous_income.total_income_amount, 0)::NUMERIC AS previous_total_income_amount,
+      COALESCE(latest_assets.asset_item_count, 0)::INT AS current_asset_item_count,
+      COALESCE(previous_assets.asset_item_count, 0)::INT AS previous_asset_item_count,
+      salary_reference.average_annual_salary::NUMERIC AS average_slovak_annual_salary
+    FROM politicians p
+    LEFT JOIN LATERAL (
+      SELECT id, declaration_year
+      FROM declarations
+      WHERE politician_id = p.id
+      ORDER BY declaration_year DESC NULLS LAST, id DESC
+      LIMIT 1
+    ) latest ON true
+    LEFT JOIN LATERAL (
+      SELECT id
+      FROM declarations
+      WHERE politician_id = p.id AND (latest.id IS NULL OR id <> latest.id)
+      ORDER BY declaration_year DESC NULLS LAST, id DESC
+      LIMIT 1
+    ) previous ON true
+    LEFT JOIN declaration_income latest_income ON latest_income.declaration_id = latest.id
+    LEFT JOIN declaration_income previous_income ON previous_income.declaration_id = previous.id
+    LEFT JOIN LATERAL (
+      SELECT (
+        COALESCE((SELECT COUNT(*) FROM declaration_real_estate WHERE declaration_id = latest.id), 0)
+        + COALESCE((SELECT COUNT(*) FROM declaration_movable_assets WHERE declaration_id = latest.id), 0)
+        + COALESCE((SELECT COUNT(*) FROM declaration_property_rights WHERE declaration_id = latest.id), 0)
+      )::INT AS asset_item_count
+    ) latest_assets ON true
+    LEFT JOIN LATERAL (
+      SELECT (
+        COALESCE((SELECT COUNT(*) FROM declaration_real_estate WHERE declaration_id = previous.id), 0)
+        + COALESCE((SELECT COUNT(*) FROM declaration_movable_assets WHERE declaration_id = previous.id), 0)
+        + COALESCE((SELECT COUNT(*) FROM declaration_property_rights WHERE declaration_id = previous.id), 0)
+      )::INT AS asset_item_count
+    ) previous_assets ON true
+    LEFT JOIN salary_reference ON salary_reference.declaration_year = latest.declaration_year
+    WHERE ($1::BIGINT IS NULL OR p.id = $1)
+  ),
+  ratios AS (
+    SELECT
+      politician_id,
+      latest_declaration_id,
+      previous_declaration_id,
+      ROUND(latest_public_function_income_amount / NULLIF(latest_total_income_amount, 0), 4) AS current_salary_to_income_ratio,
+      ROUND(previous_public_function_income_amount / NULLIF(previous_total_income_amount, 0), 4) AS previous_salary_to_income_ratio,
+      current_asset_item_count,
+      previous_asset_item_count,
+      latest_other_income_amount::BIGINT AS other_income_amount,
+      average_slovak_annual_salary::BIGINT AS average_slovak_annual_salary
+    FROM base
+  ),
+  merged AS (
+    SELECT
+      politician_id,
+      latest_declaration_id,
+      previous_declaration_id,
+      current_salary_to_income_ratio,
+      previous_salary_to_income_ratio,
+      ROUND(current_salary_to_income_ratio / NULLIF(previous_salary_to_income_ratio, 0), 4) AS salary_to_income_change_ratio,
+      current_asset_item_count,
+      previous_asset_item_count,
+      ROUND(current_asset_item_count::NUMERIC / NULLIF(previous_asset_item_count, 0), 4) AS asset_item_count_ratio,
+      other_income_amount,
+      average_slovak_annual_salary,
+      ROUND(other_income_amount::NUMERIC / NULLIF(average_slovak_annual_salary, 0), 4) AS other_income_to_average_salary_ratio
+    FROM ratios
+  ),
+  final AS (
+    SELECT
+      politician_id,
+      latest_declaration_id,
+      previous_declaration_id,
+      current_salary_to_income_ratio,
+      previous_salary_to_income_ratio,
+      salary_to_income_change_ratio,
+      current_asset_item_count,
+      previous_asset_item_count,
+      asset_item_count_ratio,
+      other_income_amount,
+      average_slovak_annual_salary,
+      other_income_to_average_salary_ratio,
+      ROUND(
+        COALESCE(salary_to_income_change_ratio, 0)
+        + COALESCE(asset_item_count_ratio, 0)
+        + COALESCE(other_income_to_average_salary_ratio, 0),
+        4
+      ) AS risk_factor
+    FROM merged
+  )
+  INSERT INTO politician_risk_factors (
+    politician_id,
+    latest_declaration_id,
+    previous_declaration_id,
+    risk_factor,
+    risk_level,
+    current_salary_to_income_ratio,
+    previous_salary_to_income_ratio,
+    salary_to_income_change_ratio,
+    current_asset_item_count,
+    previous_asset_item_count,
+    asset_item_count_ratio,
+    other_income_amount,
+    average_slovak_annual_salary,
+    other_income_to_average_salary_ratio,
+    calculated_at,
+    updated_at
+  )
+  SELECT
+    politician_id,
+    latest_declaration_id,
+    previous_declaration_id,
+    risk_factor,
+    CASE
+      WHEN risk_factor >= 4 THEN 'high'
+      WHEN risk_factor >= 2 THEN 'medium'
+      WHEN risk_factor > 0 THEN 'low'
+      ELSE 'none'
+    END AS risk_level,
+    current_salary_to_income_ratio,
+    previous_salary_to_income_ratio,
+    salary_to_income_change_ratio,
+    current_asset_item_count,
+    previous_asset_item_count,
+    asset_item_count_ratio,
+    other_income_amount,
+    average_slovak_annual_salary,
+    other_income_to_average_salary_ratio,
+    NOW(),
+    NOW()
+  FROM final
+  ON CONFLICT (politician_id)
+  DO UPDATE SET
+    latest_declaration_id = EXCLUDED.latest_declaration_id,
+    previous_declaration_id = EXCLUDED.previous_declaration_id,
+    risk_factor = EXCLUDED.risk_factor,
+    risk_level = EXCLUDED.risk_level,
+    current_salary_to_income_ratio = EXCLUDED.current_salary_to_income_ratio,
+    previous_salary_to_income_ratio = EXCLUDED.previous_salary_to_income_ratio,
+    salary_to_income_change_ratio = EXCLUDED.salary_to_income_change_ratio,
+    current_asset_item_count = EXCLUDED.current_asset_item_count,
+    previous_asset_item_count = EXCLUDED.previous_asset_item_count,
+    asset_item_count_ratio = EXCLUDED.asset_item_count_ratio,
+    other_income_amount = EXCLUDED.other_income_amount,
+    average_slovak_annual_salary = EXCLUDED.average_slovak_annual_salary,
+    other_income_to_average_salary_ratio = EXCLUDED.other_income_to_average_salary_ratio,
+    calculated_at = NOW(),
+    updated_at = NOW()
+`;
+
 function stableHash(value) {
   return crypto.createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+}
+
+async function refreshPoliticianRiskFactor(client, politicianId = null) {
+  await client.query(POLITICIAN_RISK_FACTOR_UPSERT_SQL, [politicianId]);
+}
+
+async function hasStaleOrMissingPoliticianRiskFactor(client, politicianId = null) {
+  const result = await client.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM politicians p
+        LEFT JOIN politician_risk_factors risk ON risk.politician_id = p.id
+        LEFT JOIN LATERAL (
+          SELECT id
+          FROM declarations
+          WHERE politician_id = p.id
+          ORDER BY declaration_year DESC NULLS LAST, id DESC
+          LIMIT 1
+        ) latest ON true
+        LEFT JOIN LATERAL (
+          SELECT id
+          FROM declarations
+          WHERE politician_id = p.id AND (latest.id IS NULL OR id <> latest.id)
+          ORDER BY declaration_year DESC NULLS LAST, id DESC
+          LIMIT 1
+        ) previous ON true
+        WHERE ($1::BIGINT IS NULL OR p.id = $1)
+          AND (
+            risk.politician_id IS NULL
+            OR risk.latest_declaration_id IS DISTINCT FROM latest.id
+            OR risk.previous_declaration_id IS DISTINCT FROM previous.id
+          )
+      ) AS has_stale_or_missing
+    `,
+    [politicianId],
+  );
+
+  return result.rows[0]?.has_stale_or_missing === true;
+}
+
+async function ensurePoliticianRiskFactorsCurrent(client, politicianId = null) {
+  if (await hasStaleOrMissingPoliticianRiskFactor(client, politicianId)) {
+    await refreshPoliticianRiskFactor(client, politicianId);
+  }
+}
+
+async function fetchPoliticianRiskFactor(client, politicianId) {
+  const result = await client.query(
+    `
+      SELECT *
+      FROM politician_risk_factors
+      WHERE politician_id = $1
+      LIMIT 1
+    `,
+    [politicianId],
+  );
+
+  return result.rows[0] || null;
 }
 
 async function upsertPolitician(client, { userId, fullName }) {
@@ -186,6 +420,8 @@ export async function saveDeclaration(payload, dbPool = pool) {
       const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
       await replaceCategoryItems(client, tableName, declarationId, items);
     }
+
+    await refreshPoliticianRiskFactor(client, politicianId);
 
     await client.query("COMMIT");
     return { politicianId, declarationId };
@@ -506,8 +742,12 @@ export async function savePoliticianVotingTranscript(payload, dbPool = pool) {
 }
 
 export async function listPoliticians(limit = 100) {
-  const result = await pool.query(
-    `
+  const client = await pool.connect();
+  try {
+    await ensurePoliticianRiskFactorsCurrent(client);
+
+    const result = await client.query(
+      `
       SELECT
         p.id,
         p.nrsr_user_id,
@@ -534,14 +774,22 @@ export async function listPoliticians(limit = 100) {
         previousIncome.public_function_income_amount AS previous_public_function_income_amount,
         previousIncome.other_income_amount AS previous_other_income_amount,
         previousIncome.total_income_amount AS previous_total_income_amount,
-        COALESCE(wealth.wealth_item_count, 0)::INT AS wealth_item_count,
-        COALESCE(previousWealth.wealth_item_count, 0)::INT AS previous_wealth_item_count,
+        COALESCE(risk.current_asset_item_count, 0)::INT AS wealth_item_count,
+        COALESCE(risk.previous_asset_item_count, 0)::INT AS previous_wealth_item_count,
         previousSideJobs.employment_count AS previous_employment_count,
         previousSideJobs.business_activity_count AS previous_business_activity_count,
         previousSideJobs.public_function_role_count AS previous_public_function_role_count,
+        COALESCE(risk.risk_factor, 0) AS risk_factor,
+        COALESCE(risk.risk_level, 'none') AS risk_level,
+        risk.current_salary_to_income_ratio,
+        risk.previous_salary_to_income_ratio,
+        risk.salary_to_income_change_ratio,
+        risk.asset_item_count_ratio,
+        risk.other_income_to_average_salary_ratio,
         COUNT(d.id)::INT AS declaration_count
       FROM politicians p
       LEFT JOIN declarations d ON d.politician_id = p.id
+      LEFT JOIN politician_risk_factors risk ON risk.politician_id = p.id
       LEFT JOIN LATERAL (
         SELECT id, declaration_year, public_function, scraped_at
         FROM declarations
@@ -570,22 +818,6 @@ export async function listPoliticians(limit = 100) {
       ) previousIncome ON true
       LEFT JOIN LATERAL (
         SELECT
-          (
-            COALESCE((SELECT COUNT(*) FROM declaration_real_estate WHERE declaration_id = latest.id), 0)
-            + COALESCE((SELECT COUNT(*) FROM declaration_movable_assets WHERE declaration_id = latest.id), 0)
-            + COALESCE((SELECT COUNT(*) FROM declaration_property_rights WHERE declaration_id = latest.id), 0)
-          )::INT AS wealth_item_count
-      ) wealth ON true
-      LEFT JOIN LATERAL (
-        SELECT
-          (
-            COALESCE((SELECT COUNT(*) FROM declaration_real_estate WHERE declaration_id = previous.id), 0)
-            + COALESCE((SELECT COUNT(*) FROM declaration_movable_assets WHERE declaration_id = previous.id), 0)
-            + COALESCE((SELECT COUNT(*) FROM declaration_property_rights WHERE declaration_id = previous.id), 0)
-          )::INT AS wealth_item_count
-      ) previousWealth ON true
-      LEFT JOIN LATERAL (
-        SELECT
           COALESCE((SELECT COUNT(*) FROM declaration_employment WHERE declaration_id = latest.id), 0)::INT AS employment_count,
           COALESCE((SELECT COUNT(*) FROM declaration_business_activities WHERE declaration_id = latest.id), 0)::INT AS business_activity_count,
           COALESCE((SELECT COUNT(*) FROM declaration_public_functions_during_term WHERE declaration_id = latest.id), 0)::INT AS public_function_role_count
@@ -596,23 +828,17 @@ export async function listPoliticians(limit = 100) {
           COALESCE((SELECT COUNT(*) FROM declaration_business_activities WHERE declaration_id = previous.id), 0)::INT AS business_activity_count,
           COALESCE((SELECT COUNT(*) FROM declaration_public_functions_during_term WHERE declaration_id = previous.id), 0)::INT AS public_function_role_count
       ) previousSideJobs ON true
-      GROUP BY p.id, latest.id, latest.declaration_year, latest.public_function, latest.scraped_at, latestIncome.income_text, latestIncome.public_function_income_amount, latestIncome.other_income_amount, latestIncome.total_income_amount, latestSideJobs.employment_count, latestSideJobs.business_activity_count, latestSideJobs.public_function_role_count, previous.id, previous.declaration_year, previous.public_function, previousIncome.public_function_income_amount, previousIncome.other_income_amount, previousIncome.total_income_amount, wealth.wealth_item_count, previousWealth.wealth_item_count, previousSideJobs.employment_count, previousSideJobs.business_activity_count, previousSideJobs.public_function_role_count
+      GROUP BY p.id, risk.politician_id, latest.id, latest.declaration_year, latest.public_function, latest.scraped_at, latestIncome.income_text, latestIncome.public_function_income_amount, latestIncome.other_income_amount, latestIncome.total_income_amount, latestSideJobs.employment_count, latestSideJobs.business_activity_count, latestSideJobs.public_function_role_count, previous.id, previous.declaration_year, previous.public_function, previousIncome.public_function_income_amount, previousIncome.other_income_amount, previousIncome.total_income_amount, previousSideJobs.employment_count, previousSideJobs.business_activity_count, previousSideJobs.public_function_role_count, risk.current_asset_item_count, risk.previous_asset_item_count, risk.risk_factor, risk.risk_level, risk.current_salary_to_income_ratio, risk.previous_salary_to_income_ratio, risk.salary_to_income_change_ratio, risk.asset_item_count_ratio, risk.other_income_to_average_salary_ratio
       ORDER BY p.full_name NULLS LAST
       LIMIT $1
-    `,
-    [limit],
-  );
-  return result.rows.map((row) => {
-    const riskSummary = buildListRiskSummary(row);
-    return {
-      ...row,
-      suspicious_score: riskSummary.suspicious_score,
-      suspicious_level: riskSummary.suspicious_level,
-      suspicious_flags: riskSummary.flags,
-      suspicious_flags_count: riskSummary.flags_count,
-      suspicious_coefficients: riskSummary.coefficients,
-    };
-  });
+      `,
+      [limit],
+    );
+
+    return result.rows;
+  } finally {
+    client.release();
+  }
 }
 
 export async function listPoliticianVotingStats(limit = 5000) {
@@ -845,10 +1071,13 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
       return null;
     }
 
+    await ensurePoliticianRiskFactorsCurrent(client, politicianId);
+
     const declarations = await listDeclarationsByPolitician(politicianId);
     const timelineRows = await fetchDeclarationTimeline(client, politicianId);
     const timeline = timelineRows.map(buildTimelineEntry);
-    const riskAnalysis = buildRiskAnalysisFromTimeline(timelineRows);
+    const riskRow = await fetchPoliticianRiskFactor(client, politicianId);
+    const riskAnalysis = buildRiskAnalysis(riskRow, timeline);
     const activeDeclaration = declarationId
       ? declarations.find((item) => item.id === declarationId)
       : declarations[0];

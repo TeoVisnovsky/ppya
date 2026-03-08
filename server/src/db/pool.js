@@ -48,12 +48,18 @@ function getOrCreatePool(connectionString, sslEnabled, sslRejectUnauthorized) {
   const normalizedConnectionString = sanitizeConnectionString(connectionString, sslEnabled);
   const cacheKey = getPoolCacheKey(normalizedConnectionString, sslEnabled, sslRejectUnauthorized);
   if (!poolCache.has(cacheKey)) {
+    const nextPool = new Pool({
+      connectionString: normalizedConnectionString,
+      ssl: resolveSslConfig(sslEnabled, sslRejectUnauthorized),
+    });
+
+    nextPool.on("error", (error) => {
+      console.error("Database pool emitted an idle client error:", error.message);
+    });
+
     poolCache.set(
       cacheKey,
-      new Pool({
-        connectionString: normalizedConnectionString,
-        ssl: resolveSslConfig(sslEnabled, sslRejectUnauthorized),
-      }),
+      nextPool,
     );
   }
 
