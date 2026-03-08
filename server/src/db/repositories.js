@@ -1224,6 +1224,9 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
           deputy_profile_period,
           deputy_profile_url,
           deputy_profile_scraped_at,
+          instagram,
+          facebook,
+          twitter,
           created_at,
           updated_at
         FROM politicians
