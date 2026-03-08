@@ -471,7 +471,7 @@ function extractUppercaseTerms(question) {
   return Array.from(
     String(question || "").matchAll(/\b[A-Z0-9-]{3,}\b/g),
     (match) => match[0],
-  );
+  ).filter((value) => !/^\d+$/.test(value));
 }
 
 function extractSourceKeys(question, plan = null, fallbackSourceKeys = []) {
