@@ -23,7 +23,7 @@
             <p class="eyebrow"><a href="/">Back to dataset</a></p>
             <h1>Ask the database instead of digging through it.</h1>
             <p class="hero-copy">
-              This assistant only answers from stored politician data: latest declarations, asset counts, income, party context, and risk metrics.
+              This assistant answers only from stored politician data across declarations, jobs, gifts, liabilities, voting, and profile fields.
             </p>
           </div>
 
@@ -32,6 +32,7 @@
             <ul class="hero-points">
               <li>Rank politicians by assets, income, or risk</li>
               <li>Filter answers by party, club, or year</li>
+              <li>Search latest snapshot text across assets, jobs, gifts, liabilities, and profiles</li>
               <li>Show compact politician cards with the latest facts</li>
             </ul>
           </aside>
@@ -49,7 +50,8 @@
             <div id="suggestionBar" class="suggestion-bar" aria-label="Suggested prompts">
               <button class="suggestion-chip" type="button" data-prompt="Who has the most assets?">Most assets</button>
               <button class="suggestion-chip" type="button" data-prompt="Show the top 5 highest-income politicians.">Highest income</button>
-              <button class="suggestion-chip" type="button" data-prompt="Which politicians have the highest risk factor?">Highest risk</button>
+              <button class="suggestion-chip" type="button" data-prompt="Who has liabilities?">Liabilities</button>
+              <button class="suggestion-chip" type="button" data-prompt="Who has a car with brand VOLVO?">VOLVO car</button>
               <button class="suggestion-chip" type="button" data-prompt="Tell me about Robert Fico.">Profile lookup</button>
             </div>
 
@@ -63,7 +65,7 @@
                   name="message"
                   rows="1"
                   maxlength="500"
-                  placeholder="Ask a question like 'Who has the most assets in Smer?'"
+                  placeholder="Ask a question like 'Who has a car with brand VOLVO?'"
                   required
                 ></textarea>
               </label>
@@ -86,7 +88,6 @@
         </main>
       </div>
     </div>
-
     <script type="module" src="/chatbot.js"></script>
   </body>
 </html>

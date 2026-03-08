@@ -222,7 +222,7 @@ function bindEvents() {
 function init() {
   appendMessage(
     "assistant",
-    '<p class="message-copy">Ask me for rankings like most assets, highest income, highest risk, or ask about a specific politician by name.</p>',
+    '<p class="message-copy">Ask me for rankings, politician profiles, or snapshot lookups across assets, gifts, liabilities, jobs, voting, and profile fields. I answer only from the local database-backed backend.</p>',
   );
   renderAnswerSurface(null);
   bindEvents();

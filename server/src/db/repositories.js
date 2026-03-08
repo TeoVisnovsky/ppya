@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import {
   buildActiveSideJobs,
   buildRiskAnalysis,
+  buildRiskAnalysisFromListRow,
   buildTimelineEntry,
 } from "../analysis/politicianRisk.js";
 import { pool } from "./pool.js";
@@ -33,6 +34,38 @@ const CATEGORY_LABELS = {
   giftsOrBenefits: "Dary alebo iné výhody",
   voting: "Hlasovanie",
 };
+
+const ASSET_SEARCH_SOURCES = [
+  { tableName: "declaration_movable_assets", sourceKey: "movableAssets", sourceLabel: "Movable asset" },
+  { tableName: "declaration_usage_movable_assets", sourceKey: "usageMovableAssets", sourceLabel: "Used movable asset" },
+  { tableName: "declaration_real_estate", sourceKey: "realEstate", sourceLabel: "Real estate" },
+  { tableName: "declaration_usage_real_estate", sourceKey: "usageRealEstate", sourceLabel: "Used real estate" },
+  { tableName: "declaration_property_rights", sourceKey: "propertyRights", sourceLabel: "Property right" },
+  { tableName: "declaration_gifts_or_benefits", sourceKey: "giftsOrBenefits", sourceLabel: "Gift or benefit" },
+];
+
+const SNAPSHOT_TEXT_SOURCES = [
+  { tableName: "declaration_employment", sourceKey: "employment", sourceLabel: "Employment" },
+  { tableName: "declaration_business_activities", sourceKey: "businessActivities", sourceLabel: "Business activity" },
+  { tableName: "declaration_public_functions_during_term", sourceKey: "publicFunctionsDuringTerm", sourceLabel: "Public function during term" },
+  { tableName: "declaration_real_estate", sourceKey: "realEstate", sourceLabel: "Real estate" },
+  { tableName: "declaration_movable_assets", sourceKey: "movableAssets", sourceLabel: "Movable asset" },
+  { tableName: "declaration_property_rights", sourceKey: "propertyRights", sourceLabel: "Property right" },
+  { tableName: "declaration_liabilities", sourceKey: "liabilities", sourceLabel: "Liability" },
+  { tableName: "declaration_usage_real_estate", sourceKey: "usageRealEstate", sourceLabel: "Used real estate" },
+  { tableName: "declaration_usage_movable_assets", sourceKey: "usageMovableAssets", sourceLabel: "Used movable asset" },
+  { tableName: "declaration_gifts_or_benefits", sourceKey: "giftsOrBenefits", sourceLabel: "Gift or benefit" },
+  { tableName: "declaration_voting", sourceKey: "voting", sourceLabel: "Voting" },
+];
+
+const SNAPSHOT_PROFILE_SOURCES = [
+  { sourceKey: "candidateParty", sourceLabel: "Candidate party", columnName: "candidate_party" },
+  { sourceKey: "parliamentaryClub", sourceLabel: "Parliamentary club", columnName: "parliamentary_club" },
+  { sourceKey: "region", sourceLabel: "Region", columnName: "deputy_region" },
+  { sourceKey: "residence", sourceLabel: "Residence", columnName: "deputy_residence" },
+  { sourceKey: "email", sourceLabel: "Email", columnName: "deputy_email" },
+  { sourceKey: "website", sourceLabel: "Website", columnName: "deputy_website" },
+];
 
 const AVERAGE_SALARY_VALUES_SQL = `
         (2018, 12216),
@@ -777,8 +810,6 @@ export async function savePoliticianVotingTranscript(payload, dbPool = pool) {
 export async function listPoliticians(limit = 100) {
   const client = await pool.connect();
   try {
-    await ensurePoliticianRiskFactorsCurrent(client);
-
     const result = await client.query(
       `
       SELECT
@@ -807,22 +838,14 @@ export async function listPoliticians(limit = 100) {
         previousIncome.public_function_income_amount AS previous_public_function_income_amount,
         previousIncome.other_income_amount AS previous_other_income_amount,
         previousIncome.total_income_amount AS previous_total_income_amount,
-        COALESCE(risk.current_asset_item_count, 0)::INT AS wealth_item_count,
-        COALESCE(risk.previous_asset_item_count, 0)::INT AS previous_wealth_item_count,
+        COALESCE(latestAssets.asset_item_count, 0)::INT AS wealth_item_count,
+        COALESCE(previousAssets.asset_item_count, 0)::INT AS previous_wealth_item_count,
         previousSideJobs.employment_count AS previous_employment_count,
         previousSideJobs.business_activity_count AS previous_business_activity_count,
         previousSideJobs.public_function_role_count AS previous_public_function_role_count,
-        COALESCE(risk.risk_factor, 0) AS risk_factor,
-        COALESCE(risk.risk_level, 'none') AS risk_level,
-        risk.current_salary_to_income_ratio,
-        risk.previous_salary_to_income_ratio,
-        risk.salary_to_income_change_ratio,
-        risk.asset_item_count_ratio,
-        risk.other_income_to_average_salary_ratio,
         COUNT(d.id)::INT AS declaration_count
       FROM politicians p
       LEFT JOIN declarations d ON d.politician_id = p.id
-      LEFT JOIN politician_risk_factors risk ON risk.politician_id = p.id
       LEFT JOIN LATERAL (
         SELECT id, declaration_year, public_function, scraped_at
         FROM declarations
@@ -850,6 +873,20 @@ export async function listPoliticians(limit = 100) {
         LIMIT 1
       ) previousIncome ON true
       LEFT JOIN LATERAL (
+        SELECT (
+          COALESCE((SELECT COUNT(*) FROM declaration_real_estate WHERE declaration_id = latest.id), 0)
+          + COALESCE((SELECT COUNT(*) FROM declaration_movable_assets WHERE declaration_id = latest.id), 0)
+          + COALESCE((SELECT COUNT(*) FROM declaration_property_rights WHERE declaration_id = latest.id), 0)
+        )::INT AS asset_item_count
+      ) latestAssets ON true
+      LEFT JOIN LATERAL (
+        SELECT (
+          COALESCE((SELECT COUNT(*) FROM declaration_real_estate WHERE declaration_id = previous.id), 0)
+          + COALESCE((SELECT COUNT(*) FROM declaration_movable_assets WHERE declaration_id = previous.id), 0)
+          + COALESCE((SELECT COUNT(*) FROM declaration_property_rights WHERE declaration_id = previous.id), 0)
+        )::INT AS asset_item_count
+      ) previousAssets ON true
+      LEFT JOIN LATERAL (
         SELECT
           COALESCE((SELECT COUNT(*) FROM declaration_employment WHERE declaration_id = latest.id), 0)::INT AS employment_count,
           COALESCE((SELECT COUNT(*) FROM declaration_business_activities WHERE declaration_id = latest.id), 0)::INT AS business_activity_count,
@@ -861,17 +898,246 @@ export async function listPoliticians(limit = 100) {
           COALESCE((SELECT COUNT(*) FROM declaration_business_activities WHERE declaration_id = previous.id), 0)::INT AS business_activity_count,
           COALESCE((SELECT COUNT(*) FROM declaration_public_functions_during_term WHERE declaration_id = previous.id), 0)::INT AS public_function_role_count
       ) previousSideJobs ON true
-      GROUP BY p.id, risk.politician_id, latest.id, latest.declaration_year, latest.public_function, latest.scraped_at, latestIncome.income_text, latestIncome.public_function_income_amount, latestIncome.other_income_amount, latestIncome.total_income_amount, latestSideJobs.employment_count, latestSideJobs.business_activity_count, latestSideJobs.public_function_role_count, previous.id, previous.declaration_year, previous.public_function, previousIncome.public_function_income_amount, previousIncome.other_income_amount, previousIncome.total_income_amount, previousSideJobs.employment_count, previousSideJobs.business_activity_count, previousSideJobs.public_function_role_count, risk.current_asset_item_count, risk.previous_asset_item_count, risk.risk_factor, risk.risk_level, risk.current_salary_to_income_ratio, risk.previous_salary_to_income_ratio, risk.salary_to_income_change_ratio, risk.asset_item_count_ratio, risk.other_income_to_average_salary_ratio
+      GROUP BY p.id, latest.id, latest.declaration_year, latest.public_function, latest.scraped_at, latestIncome.income_text, latestIncome.public_function_income_amount, latestIncome.other_income_amount, latestIncome.total_income_amount, latestAssets.asset_item_count, latestSideJobs.employment_count, latestSideJobs.business_activity_count, latestSideJobs.public_function_role_count, previous.id, previous.declaration_year, previous.public_function, previousIncome.public_function_income_amount, previousIncome.other_income_amount, previousIncome.total_income_amount, previousAssets.asset_item_count, previousSideJobs.employment_count, previousSideJobs.business_activity_count, previousSideJobs.public_function_role_count
       ORDER BY p.full_name NULLS LAST
       LIMIT $1
       `,
       [limit],
     );
 
-    return result.rows;
+    return result.rows.map((row) => {
+      const riskAnalysis = buildRiskAnalysisFromListRow(row);
+
+      return {
+        ...row,
+        risk_factor: riskAnalysis.risk_factor,
+        risk_level: riskAnalysis.risk_level,
+        current_salary_to_income_ratio: riskAnalysis.coefficients.current_salary_to_income_ratio,
+        previous_salary_to_income_ratio: riskAnalysis.coefficients.previous_salary_to_income_ratio,
+        salary_to_income_change_ratio: riskAnalysis.coefficients.salary_to_income_change_ratio,
+        asset_item_count_ratio: riskAnalysis.coefficients.asset_item_count_ratio,
+        other_income_to_average_salary_ratio: riskAnalysis.coefficients.other_income_to_average_salary_ratio,
+        average_slovak_annual_salary: riskAnalysis.average_slovak_annual_salary,
+      };
+    });
   } finally {
     client.release();
   }
+}
+
+export async function searchPoliticiansByLatestAssetText({ searchTerms = [], year = null, limit = 8 } = {}) {
+  const cleanedTerms = Array.from(new Set(
+    searchTerms
+      .map((term) => String(term || "").trim())
+      .filter((term) => term.length >= 2),
+  )).slice(0, 6);
+
+  if (!cleanedTerms.length) {
+    return [];
+  }
+
+  const assetItemsSql = ASSET_SEARCH_SOURCES.map((source) => `
+        SELECT declaration_id, '${source.sourceKey}' AS asset_source, '${source.sourceLabel}' AS asset_source_label, item_text
+        FROM ${source.tableName}
+      `).join("\n      UNION ALL\n");
+
+  const termClauses = cleanedTerms
+    .map((_, index) => `LOWER(asset.item_text) LIKE '%' || LOWER($${index + 1}) || '%'`)
+    .join(" AND ");
+
+  const yearParamIndex = cleanedTerms.length + 1;
+  const limitParamIndex = cleanedTerms.length + 2;
+
+  const result = await pool.query(
+    `
+      WITH latest_declarations AS (
+        SELECT DISTINCT ON (d.politician_id)
+          d.politician_id,
+          d.id AS declaration_id,
+          d.declaration_year
+        FROM declarations d
+        ORDER BY d.politician_id, d.declaration_year DESC NULLS LAST, d.id DESC
+      ),
+      asset_items AS (
+${assetItemsSql}
+      ),
+      matched_items AS (
+        SELECT
+          ld.politician_id,
+          ld.declaration_id,
+          ld.declaration_year,
+          asset.asset_source,
+          asset.asset_source_label,
+          asset.item_text,
+          COUNT(*) OVER (PARTITION BY ld.politician_id) AS politician_match_count,
+          ROW_NUMBER() OVER (
+            PARTITION BY ld.politician_id
+            ORDER BY LENGTH(asset.item_text) ASC, asset.item_text ASC
+          ) AS item_rank
+        FROM latest_declarations ld
+        JOIN asset_items asset ON asset.declaration_id = ld.declaration_id
+        WHERE ${termClauses}
+          AND ($${yearParamIndex}::INT IS NULL OR ld.declaration_year = $${yearParamIndex}::INT)
+      )
+      SELECT
+        p.id AS politician_id,
+        p.full_name,
+        matched_items.declaration_id,
+        matched_items.declaration_year,
+        matched_items.asset_source,
+        matched_items.asset_source_label,
+        matched_items.item_text,
+        matched_items.politician_match_count
+      FROM matched_items
+      JOIN politicians p ON p.id = matched_items.politician_id
+      WHERE matched_items.item_rank = 1
+      ORDER BY matched_items.politician_match_count DESC, p.full_name ASC
+      LIMIT $${limitParamIndex}::INT
+    `,
+    [...cleanedTerms, year, limit],
+  );
+
+  return result.rows;
+}
+
+export async function searchPoliticiansByLatestSnapshotText({ searchTerms = [], sourceKeys = [], year = null, limit = 8 } = {}) {
+  const cleanedTerms = Array.from(new Set(
+    searchTerms
+      .map((term) => String(term || "").trim())
+      .filter((term) => term.length >= 2),
+  )).slice(0, 6);
+  const cleanedSourceKeys = Array.from(new Set(
+    sourceKeys
+      .map((sourceKey) => String(sourceKey || "").trim())
+      .filter(Boolean),
+  )).slice(0, 12);
+
+  if (!cleanedTerms.length && !cleanedSourceKeys.length) {
+    return [];
+  }
+
+  const textItemsSql = SNAPSHOT_TEXT_SOURCES.map((source) => `
+        SELECT
+          ld.politician_id,
+          ld.declaration_id,
+          ld.declaration_year,
+          '${source.sourceKey}' AS source_key,
+          '${source.sourceLabel}' AS source_label,
+          items.item_text
+        FROM latest_declarations ld
+        JOIN ${source.tableName} items ON items.declaration_id = ld.declaration_id
+      `).join("\n      UNION ALL\n");
+
+  const profileItemsSql = SNAPSHOT_PROFILE_SOURCES.map((source) => `
+        SELECT
+          p.id AS politician_id,
+          ld.declaration_id,
+          ld.declaration_year,
+          '${source.sourceKey}' AS source_key,
+          '${source.sourceLabel}' AS source_label,
+          p.${source.columnName} AS item_text
+        FROM politicians p
+        LEFT JOIN latest_declarations ld ON ld.politician_id = p.id
+        WHERE p.${source.columnName} IS NOT NULL
+      `).join("\n      UNION ALL\n");
+
+  const termStartIndex = 1;
+  const termClauses = cleanedTerms
+    .map((_, index) => `LOWER(search_item.item_text) LIKE '%' || LOWER($${termStartIndex + index}) || '%'`);
+  const sourceParamIndex = cleanedTerms.length + 1;
+  const yearParamIndex = cleanedTerms.length + 2;
+  const limitParamIndex = cleanedTerms.length + 3;
+
+  const filters = [
+    ...(termClauses.length ? termClauses : []),
+    `(COALESCE(array_length($${sourceParamIndex}::text[], 1), 0) = 0 OR search_item.source_key = ANY($${sourceParamIndex}::text[]))`,
+    `($${yearParamIndex}::INT IS NULL OR search_item.declaration_year = $${yearParamIndex}::INT)`,
+  ];
+
+  const result = await pool.query(
+    `
+      WITH latest_declarations AS (
+        SELECT DISTINCT ON (d.politician_id)
+          d.politician_id,
+          d.id AS declaration_id,
+          d.declaration_year
+        FROM declarations d
+        ORDER BY d.politician_id, d.declaration_year DESC NULLS LAST, d.id DESC
+      ),
+      search_items AS (
+${textItemsSql}
+        UNION ALL
+        SELECT
+          ld.politician_id,
+          ld.declaration_id,
+          ld.declaration_year,
+          'income' AS source_key,
+          'Income text' AS source_label,
+          income.income_text AS item_text
+        FROM latest_declarations ld
+        JOIN declaration_income income ON income.declaration_id = ld.declaration_id
+        WHERE income.income_text IS NOT NULL
+        UNION ALL
+        SELECT
+          ld.politician_id,
+          ld.declaration_id,
+          ld.declaration_year,
+          'incompatibility' AS source_key,
+          'Incompatibility conditions' AS source_label,
+          incompatibility.response_text AS item_text
+        FROM latest_declarations ld
+        JOIN declaration_incompatibility_conditions incompatibility ON incompatibility.declaration_id = ld.declaration_id
+        WHERE incompatibility.response_text IS NOT NULL
+        UNION ALL
+        SELECT
+          p.id AS politician_id,
+          ld.declaration_id,
+          ld.declaration_year,
+          'publicFunction' AS source_key,
+          'Public function' AS source_label,
+          d.public_function AS item_text
+        FROM politicians p
+        LEFT JOIN latest_declarations ld ON ld.politician_id = p.id
+        LEFT JOIN declarations d ON d.id = ld.declaration_id
+        WHERE d.public_function IS NOT NULL
+        UNION ALL
+${profileItemsSql}
+      ),
+      matched_items AS (
+        SELECT
+          search_item.politician_id,
+          search_item.declaration_id,
+          search_item.declaration_year,
+          search_item.source_key,
+          search_item.source_label,
+          search_item.item_text,
+          COUNT(*) OVER (PARTITION BY search_item.politician_id) AS politician_match_count,
+          ROW_NUMBER() OVER (
+            PARTITION BY search_item.politician_id
+            ORDER BY LENGTH(search_item.item_text) ASC, search_item.source_label ASC, search_item.item_text ASC
+          ) AS item_rank
+        FROM search_items search_item
+        WHERE ${filters.join("\n          AND ")}
+      )
+      SELECT
+        p.id AS politician_id,
+        p.full_name,
+        matched_items.declaration_id,
+        matched_items.declaration_year,
+        matched_items.source_key,
+        matched_items.source_label,
+        matched_items.item_text,
+        matched_items.politician_match_count
+      FROM matched_items
+      JOIN politicians p ON p.id = matched_items.politician_id
+      WHERE matched_items.item_rank = 1
+      ORDER BY matched_items.politician_match_count DESC, p.full_name ASC
+      LIMIT $${limitParamIndex}::INT
+    `,
+    [...cleanedTerms, cleanedSourceKeys, year, limit],
+  );
+
+  return result.rows;
 }
 
 export async function listPoliticianVotingStats(limit = 5000) {
@@ -1127,13 +1393,10 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
       politician.deputy_photo_data = null;
     }
 
-    await ensurePoliticianRiskFactorsCurrent(client, politicianId);
-
     const declarations = await listDeclarationsByPolitician(politicianId);
     const timelineRows = await fetchDeclarationTimeline(client, politicianId);
     const timeline = timelineRows.map(buildTimelineEntry);
-    const riskRow = await fetchPoliticianRiskFactor(client, politicianId);
-    const riskAnalysis = buildRiskAnalysis(riskRow, timeline);
+    const riskAnalysis = buildRiskAnalysis(null, timeline);
     const activeDeclaration = declarationId
       ? declarations.find((item) => item.id === declarationId)
       : declarations[0];

@@ -1,4 +1,4 @@
-import { listPoliticians } from "../db/repositories.js";
+import { listPoliticians, searchPoliticiansByLatestAssetText, searchPoliticiansByLatestSnapshotText } from "../db/repositories.js";
 
 const DEFAULT_LIMIT = 4;
 const MAX_LIMIT = 8;
@@ -7,8 +7,53 @@ const GENERIC_SUGGESTIONS = [
   "Who has the most assets?",
   "Show the top 5 highest-income politicians.",
   "Which politicians have the highest risk factor?",
+  "Who has a car with brand VOLVO?",
   "Tell me about Robert Fico.",
 ];
+
+const SUPPORTED_INTENTS = new Set([
+  "assets",
+  "income",
+  "risk",
+  "otherIncome",
+  "assetJump",
+  "assetSearch",
+  "textSearch",
+  "profile",
+  "unknown",
+]);
+
+const ASSET_SOURCE_KEYS = [
+  "movableAssets",
+  "usageMovableAssets",
+  "realEstate",
+  "usageRealEstate",
+  "propertyRights",
+  "giftsOrBenefits",
+];
+
+const SOURCE_KEY_LABELS = {
+  employment: "Employment",
+  businessActivities: "Business activity",
+  publicFunctionsDuringTerm: "Public function during term",
+  publicFunction: "Public function",
+  realEstate: "Real estate",
+  movableAssets: "Movable asset",
+  propertyRights: "Property right",
+  liabilities: "Liability",
+  usageRealEstate: "Used real estate",
+  usageMovableAssets: "Used movable asset",
+  giftsOrBenefits: "Gift or benefit",
+  voting: "Voting",
+  income: "Income text",
+  incompatibility: "Incompatibility conditions",
+  candidateParty: "Candidate party",
+  parliamentaryClub: "Parliamentary club",
+  region: "Region",
+  residence: "Residence",
+  email: "Email",
+  website: "Website",
+};
 
 const STOP_WORDS = new Set([
   "a",
@@ -74,6 +119,114 @@ const STOP_WORDS = new Set([
   "politici",
 ]);
 
+const ASSET_SEARCH_STOP_WORDS = new Set([
+  ...STOP_WORDS,
+  "asset",
+  "assets",
+  "brand",
+  "brands",
+  "car",
+  "cars",
+  "declaration",
+  "declared",
+  "gift",
+  "gifts",
+  "house",
+  "houses",
+  "item",
+  "items",
+  "latest",
+  "majetok",
+  "majetku",
+  "model",
+  "models",
+  "new",
+  "old",
+  "has",
+  "have",
+  "own",
+  "owned",
+  "owner",
+  "owners",
+  "owns",
+  "property",
+  "vehicle",
+  "vehicles",
+  "whose",
+  "znacka",
+  "znacky",
+  "byt",
+  "dom",
+  "garaz",
+  "hnutelna",
+  "hnutelne",
+  "hnutelnej",
+  "nehnutelnost",
+  "nehnutelnosti",
+  "pozemok",
+  "vec",
+  "veci",
+  "vozidlo",
+  "vozidla",
+]);
+
+const GLOBAL_SEARCH_STOP_WORDS = new Set([
+  ...ASSET_SEARCH_STOP_WORDS,
+  "activity",
+  "activities",
+  "benefit",
+  "benefits",
+  "business",
+  "candidate",
+  "club",
+  "debt",
+  "debts",
+  "email",
+  "employment",
+  "function",
+  "functions",
+  "gift",
+  "gifts",
+  "income",
+  "incompatibility",
+  "job",
+  "jobs",
+  "liability",
+  "liabilities",
+  "loan",
+  "loans",
+  "mortgage",
+  "party",
+  "region",
+  "residence",
+  "salary",
+  "vote",
+  "votes",
+  "voting",
+  "website",
+  "work",
+]);
+
+const SOURCE_FILTER_PATTERNS = [
+  { sourceKeys: ["giftsOrBenefits"], pattern: /(gift|gifts|benefit|benefits|dar|dary|vyhod)/ },
+  { sourceKeys: ["liabilities"], pattern: /(liabilit|debt|debts|loan|loans|mortgage|uver|zavaz|hypotek)/ },
+  { sourceKeys: ["employment", "businessActivities", "publicFunctionsDuringTerm"], pattern: /(employment|job|jobs|work|works|working|zamestnan|prac)/ },
+  { sourceKeys: ["businessActivities"], pattern: /(business|company|companies|firm|firms|podnik|firma|spolocnost)/ },
+  { sourceKeys: ["publicFunctionsDuringTerm", "publicFunction"], pattern: /(public function|function|functions|board|statutar|riadia|funkci)/ },
+  { sourceKeys: ["realEstate", "usageRealEstate"], pattern: /(real estate|property|properties|house|houses|apartment|apartments|flat|land|garage|garaz|dom|byt|nehnutel|pozemok)/ },
+  { sourceKeys: ["movableAssets", "usageMovableAssets"], pattern: /(car|cars|vehicle|vehicles|auto|automobile|motor|truck|boat|bike|motorcycle|volvo|bmw|audi|tesla|skoda|toyota|ford|mercedes|hnutel|vozid)/ },
+  { sourceKeys: ["propertyRights"], pattern: /(property right|property rights|share|shares|stock|stocks|equity|stake|podiel|akci)/ },
+  { sourceKeys: ["voting"], pattern: /(vote|votes|voting|hlasov|hlasovani)/ },
+  { sourceKeys: ["income"], pattern: /(income text|salary text|income|salary|prijem|prijmy|zarab)/ },
+  { sourceKeys: ["incompatibility"], pattern: /(incompatib|conflict|nezlucitel)/ },
+  { sourceKeys: ["candidateParty"], pattern: /(candidate party|party|stran)/ },
+  { sourceKeys: ["parliamentaryClub"], pattern: /(club|parliamentary club|klub)/ },
+  { sourceKeys: ["region"], pattern: /(region|kraj)/ },
+  { sourceKeys: ["residence"], pattern: /(residence|address|city|town|village|bydlisko|mesto|obec)/ },
+  { sourceKeys: ["email"], pattern: /(email|mail)/ },
+  { sourceKeys: ["website"], pattern: /(website|web|url|site)/ },
+];
+
 function normalizeText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -112,6 +265,15 @@ function formatCurrency(value) {
 
 function formatRisk(value) {
   return toNumber(value).toFixed(2);
+}
+
+function truncateText(value, maxLength = 140) {
+  const text = String(value || "").trim();
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
 }
 
 function getAssetCount(row) {
@@ -179,6 +341,89 @@ function getQueryYear(question) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function sanitizePlan(rawPlan) {
+  if (!rawPlan || typeof rawPlan !== "object" || Array.isArray(rawPlan)) {
+    return null;
+  }
+
+  const intent = typeof rawPlan.intent === "string" && SUPPORTED_INTENTS.has(rawPlan.intent)
+    ? rawPlan.intent
+    : null;
+  const limit = Number.isFinite(Number(rawPlan.limit))
+    ? clamp(Number(rawPlan.limit), 1, MAX_LIMIT)
+    : null;
+  const year = Number.isFinite(Number(rawPlan.year)) ? Number(rawPlan.year) : null;
+  const partyOrClub = typeof rawPlan.partyOrClub === "string" && rawPlan.partyOrClub.trim()
+    ? rawPlan.partyOrClub.trim().slice(0, 120)
+    : null;
+  const searchTerms = Array.isArray(rawPlan.searchTerms)
+    ? Array.from(new Set(
+      rawPlan.searchTerms
+        .map((term) => String(term || "").trim())
+        .filter((term) => term.length >= 2),
+    )).slice(0, 6)
+    : [];
+  const sourceKeys = Array.isArray(rawPlan.sourceKeys)
+    ? Array.from(new Set(
+      rawPlan.sourceKeys
+        .map((sourceKey) => String(sourceKey || "").trim())
+        .filter(Boolean),
+    )).slice(0, 12)
+    : [];
+
+  return {
+    intent,
+    limit,
+    year,
+    partyOrClub,
+    searchTerms,
+    sourceKeys,
+  };
+}
+
+function extractQuotedTerms(question) {
+  return Array.from(
+    String(question || "").matchAll(/"([^"]+)"|'([^']+)'/g),
+    (match) => match[1] || match[2] || "",
+  )
+    .map((value) => value.trim())
+    .filter((value) => value.length >= 2);
+}
+
+function extractUppercaseTerms(question) {
+  return Array.from(
+    String(question || "").matchAll(/\b[A-Z0-9-]{3,}\b/g),
+    (match) => match[0],
+  );
+}
+
+function extractSourceKeys(question, plan = null, fallbackSourceKeys = []) {
+  const plannedSourceKeys = Array.isArray(plan?.sourceKeys) ? plan.sourceKeys : [];
+  if (plannedSourceKeys.length) {
+    return plannedSourceKeys;
+  }
+
+  const normalizedQuestion = normalizeText(question);
+  const sourceKeys = new Set();
+  for (const candidate of SOURCE_FILTER_PATTERNS) {
+    if (!candidate.pattern.test(normalizedQuestion)) {
+      continue;
+    }
+
+    for (const sourceKey of candidate.sourceKeys) {
+      sourceKeys.add(sourceKey);
+    }
+  }
+
+  if (!sourceKeys.size && Array.isArray(fallbackSourceKeys)) {
+    for (const sourceKey of fallbackSourceKeys) {
+      sourceKeys.add(sourceKey);
+    }
+  }
+
+  return Array.from(sourceKeys);
+}
+
 function inferPartyOrClub(question, rows) {
   const normalizedQuestion = normalizeText(question);
   const values = new Map();
@@ -222,7 +467,11 @@ function matchesYear(row, year) {
   return !year || toNumber(row.latest_declaration_year) === year;
 }
 
-function detectIntent(question) {
+function detectIntent(question, plan = null) {
+  if (plan?.intent && plan.intent !== "unknown") {
+    return plan.intent;
+  }
+
   const normalizedQuestion = normalizeText(question);
 
   if (!normalizedQuestion) {
@@ -252,8 +501,20 @@ function detectIntent(question) {
     return "assetJump";
   }
 
+  if (
+    (/(who has|who owns|find|show|najdi|kto ma|kto vlastni|ktory ma|ktora ma|ukaz)/.test(normalizedQuestion)
+      && /(brand|model|car|vehicle|auto|house|apartment|land|gift|volvo|bmw|audi|tesla|skoda|toyota|ford|mercedes|nehnutel|hnutel|byt|dom|pozemok|garaz|znack)/.test(normalizedQuestion))
+    || /(brand|model|car|vehicle|auto|house|apartment|land|gift|volvo|bmw|audi|tesla|skoda|toyota|ford|mercedes|nehnutel|hnutel|byt|dom|pozemok|garaz|znack)/.test(normalizedQuestion)
+  ) {
+    return "assetSearch";
+  }
+
   if (/(who is|tell me about|show me|find|najdi|kto je|povedz mi o|info o|detail)/.test(normalizedQuestion)) {
     return "profile";
+  }
+
+  if (extractSourceKeys(question, plan).length || extractQuotedTerms(question).length || extractUppercaseTerms(question).length) {
+    return "textSearch";
   }
 
   return "profile";
@@ -264,6 +525,66 @@ function buildSearchTokens(question) {
     .split(/\s+/)
     .filter((token) => token.length >= 2)
     .filter((token) => !STOP_WORDS.has(token));
+}
+
+function buildAssetSearchTerms(question, plan = null) {
+  const plannedTerms = Array.isArray(plan?.searchTerms) ? plan.searchTerms : [];
+  if (plannedTerms.length) {
+    return plannedTerms;
+  }
+
+  const terms = [
+    ...extractQuotedTerms(question),
+    ...extractUppercaseTerms(question),
+    ...buildSearchTokens(question).filter((token) => !ASSET_SEARCH_STOP_WORDS.has(token)),
+  ];
+
+  const uniqueTerms = new Map();
+  for (const term of terms) {
+    const cleaned = String(term || "").trim();
+    if (cleaned.length < 2) {
+      continue;
+    }
+
+    const key = normalizeText(cleaned);
+    if (!key || uniqueTerms.has(key)) {
+      continue;
+    }
+
+    uniqueTerms.set(key, cleaned);
+  }
+
+  return Array.from(uniqueTerms.values()).slice(0, 6);
+}
+
+function buildGlobalSearchTerms(question, plan = null) {
+  const plannedTerms = Array.isArray(plan?.searchTerms) ? plan.searchTerms : [];
+  if (plannedTerms.length) {
+    return plannedTerms;
+  }
+
+  const terms = [
+    ...extractQuotedTerms(question),
+    ...extractUppercaseTerms(question),
+    ...buildSearchTokens(question).filter((token) => !GLOBAL_SEARCH_STOP_WORDS.has(token)),
+  ];
+
+  const uniqueTerms = new Map();
+  for (const term of terms) {
+    const cleaned = String(term || "").trim();
+    if (cleaned.length < 2) {
+      continue;
+    }
+
+    const key = normalizeText(cleaned);
+    if (!key || uniqueTerms.has(key)) {
+      continue;
+    }
+
+    uniqueTerms.set(key, cleaned);
+  }
+
+  return Array.from(uniqueTerms.values()).slice(0, 6);
 }
 
 function extractProfileHint(question) {
@@ -355,6 +676,40 @@ function buildCard(row, contextLabel) {
   };
 }
 
+function buildAssetMatchCard(row, match) {
+  const card = buildCard(row, "Latest declaration asset match");
+  card.contextLabel = `${match.asset_source_label} in latest declaration`;
+  card.related = [
+    { label: "Matched asset", value: truncateText(match.item_text, 120) },
+    { label: "Asset type", value: match.asset_source_label || "-" },
+    { label: "Match count", value: formatInteger(match.politician_match_count) },
+    { label: "Klub", value: row.parliamentary_club || "-" },
+  ];
+  return card;
+}
+
+function buildTextMatchCard(row, match) {
+  const card = buildCard(row, "Latest snapshot text match");
+  card.contextLabel = `${match.source_label} in latest stored snapshot`;
+  card.related = [
+    { label: "Matched text", value: truncateText(match.item_text, 120) },
+    { label: "Source", value: match.source_label || "-" },
+    { label: "Match count", value: formatInteger(match.politician_match_count) },
+    { label: "Klub", value: row.parliamentary_club || "-" },
+  ];
+  return card;
+}
+
+function formatSourceLabelSummary(sourceKeys) {
+  const labels = Array.from(new Set(
+    sourceKeys
+      .map((sourceKey) => SOURCE_KEY_LABELS[sourceKey] || sourceKey)
+      .filter(Boolean),
+  ));
+
+  return labels.join(", ");
+}
+
 function averageOf(rows, selector) {
   if (!rows.length) {
     return 0;
@@ -396,6 +751,22 @@ function buildRelatedFacts(intent, rows, partyOrClub, year) {
 }
 
 function buildSuggestions(intent, rows) {
+  if (intent === "assetSearch") {
+    return [
+      "Who has a car with brand VOLVO?",
+      "Who has the most assets?",
+      "Show the top 5 highest-income politicians.",
+    ];
+  }
+
+  if (intent === "textSearch") {
+    return [
+      "Who has gifts?",
+      "Who has liabilities?",
+      "Which politicians mention Bratislava?",
+    ];
+  }
+
   if (intent === "profile" && rows[0]) {
     return [
       `Show ${rows[0].full_name}'s income ranking.`,
@@ -433,6 +804,129 @@ function buildUnknownResponse(question) {
     relatedFacts: [],
     cards: [],
     suggestions: GENERIC_SUGGESTIONS,
+  };
+}
+
+async function buildAssetSearchResult(question, rows, limit, partyOrClub, year, plan) {
+  const searchTerms = buildAssetSearchTerms(question, plan);
+  if (!searchTerms.length) {
+    return buildNoResultsResponse(question, partyOrClub, year);
+  }
+
+  const datasetById = new Map(rows.map((row) => [row.id, row]));
+  const matches = await searchPoliticiansByLatestAssetText({
+    searchTerms,
+    year,
+    limit: Math.max(limit * 3, limit),
+  });
+
+  const filteredMatches = matches
+    .map((match) => ({
+      ...match,
+      row: datasetById.get(match.politician_id),
+    }))
+    .filter((match) => match.row)
+    .filter((match) => matchesPartyOrClub(match.row, partyOrClub))
+    .slice(0, limit);
+
+  if (!filteredMatches.length) {
+    return {
+      ...buildNoResultsResponse(question, partyOrClub, year),
+      relatedFacts: [
+        ...(partyOrClub ? [{ label: "Filter", value: partyOrClub }] : []),
+        ...(year ? [{ label: "Rok", value: String(year) }] : []),
+        { label: "Asset terms", value: searchTerms.join(", ") },
+      ],
+      suggestions: buildSuggestions("assetSearch", []),
+    };
+  }
+
+  const matchedRows = filteredMatches.map((match) => match.row);
+  const leader = filteredMatches[0];
+
+  return {
+    ok: true,
+    question,
+    intent: "assetSearch",
+    heading: "Matching asset records",
+    answer: `${leader.row.full_name} is the strongest match for ${searchTerms.join(", ")} in the latest stored declaration assets.`,
+    relatedFacts: [
+      ...(partyOrClub ? [{ label: "Filter", value: partyOrClub }] : []),
+      ...(year ? [{ label: "Rok", value: String(year) }] : []),
+      { label: "Asset terms", value: searchTerms.join(", ") },
+      { label: "Zhody", value: formatInteger(filteredMatches.length) },
+      { label: "Priemer majetku", value: `${formatInteger(averageOf(matchedRows, getAssetCount))} poloziek` },
+    ],
+    cards: filteredMatches.map((match) => buildAssetMatchCard(match.row, match)),
+    suggestions: buildSuggestions("assetSearch", matchedRows),
+  };
+}
+
+async function buildTextSearchResult(question, rows, limit, partyOrClub, year, plan, fallbackSourceKeys = []) {
+  const sourceKeys = extractSourceKeys(question, plan, fallbackSourceKeys);
+  const searchTerms = buildGlobalSearchTerms(question, plan);
+  if (!searchTerms.length && !sourceKeys.length) {
+    return buildNoResultsResponse(question, partyOrClub, year);
+  }
+
+  const datasetById = new Map(rows.map((row) => [row.id, row]));
+  const matches = await searchPoliticiansByLatestSnapshotText({
+    searchTerms,
+    sourceKeys,
+    year,
+    limit: Math.max(limit * 3, limit),
+  });
+
+  const filteredMatches = matches
+    .map((match) => ({
+      ...match,
+      row: datasetById.get(match.politician_id),
+    }))
+    .filter((match) => match.row)
+    .filter((match) => matchesPartyOrClub(match.row, partyOrClub))
+    .slice(0, limit);
+
+  if (!filteredMatches.length) {
+    return {
+      ...buildNoResultsResponse(question, partyOrClub, year),
+      relatedFacts: [
+        ...(partyOrClub ? [{ label: "Filter", value: partyOrClub }] : []),
+        ...(year ? [{ label: "Rok", value: String(year) }] : []),
+        ...(sourceKeys.length ? [{ label: "Sources", value: formatSourceLabelSummary(sourceKeys) }] : []),
+        ...(searchTerms.length ? [{ label: "Search terms", value: searchTerms.join(", ") }] : []),
+      ],
+      suggestions: buildSuggestions("textSearch", []),
+    };
+  }
+
+  const matchedRows = filteredMatches.map((match) => match.row);
+  const leader = filteredMatches[0];
+  const sourceSummary = formatSourceLabelSummary(sourceKeys.length ? sourceKeys : filteredMatches.map((match) => match.source_key));
+
+  let answer = "";
+  if (searchTerms.length && sourceSummary) {
+    answer = `${leader.row.full_name} is the strongest latest-snapshot match for ${searchTerms.join(", ")} in ${sourceSummary}.`;
+  } else if (searchTerms.length) {
+    answer = `${leader.row.full_name} is the strongest latest-snapshot text match for ${searchTerms.join(", ")}.`;
+  } else {
+    answer = `${leader.row.full_name} has matching latest-snapshot records in ${sourceSummary}.`;
+  }
+
+  return {
+    ok: true,
+    question,
+    intent: "textSearch",
+    heading: "Latest snapshot matches",
+    answer,
+    relatedFacts: [
+      ...(partyOrClub ? [{ label: "Filter", value: partyOrClub }] : []),
+      ...(year ? [{ label: "Rok", value: String(year) }] : []),
+      ...(sourceSummary ? [{ label: "Sources", value: sourceSummary }] : []),
+      ...(searchTerms.length ? [{ label: "Search terms", value: searchTerms.join(", ") }] : []),
+      { label: "Zhody", value: formatInteger(filteredMatches.length) },
+    ],
+    cards: filteredMatches.map((match) => buildTextMatchCard(match.row, match)),
+    suggestions: buildSuggestions("textSearch", matchedRows),
   };
 }
 
@@ -512,17 +1006,39 @@ function buildIntentResult(intent, question, rows, limit, partyOrClub, year) {
   };
 }
 
-export async function answerChatbotQuestion(question) {
+export async function answerChatbotQuestion(question, rawPlan = null) {
   const trimmedQuestion = String(question || "").trim();
   if (!trimmedQuestion) {
     throw new Error("Question is required.");
   }
 
+  const plan = sanitizePlan(rawPlan);
   const dataset = await listPoliticians(10000);
-  const limit = getQueryLimit(trimmedQuestion);
-  const year = getQueryYear(trimmedQuestion);
-  const partyOrClub = inferPartyOrClub(trimmedQuestion, dataset);
-  const intent = detectIntent(trimmedQuestion);
+  const limit = plan?.limit ?? getQueryLimit(trimmedQuestion);
+  const year = plan?.year ?? getQueryYear(trimmedQuestion);
+  const partyOrClub = plan?.partyOrClub ?? inferPartyOrClub(trimmedQuestion, dataset);
+  const intent = detectIntent(trimmedQuestion, plan);
 
-  return buildIntentResult(intent, trimmedQuestion, dataset, limit, partyOrClub, year);
+  if (intent === "assetSearch") {
+    return buildAssetSearchResult(trimmedQuestion, dataset, limit, partyOrClub, year, plan);
+  }
+
+  if (intent === "textSearch") {
+    return buildTextSearchResult(trimmedQuestion, dataset, limit, partyOrClub, year, plan);
+  }
+
+  if (intent === "unknown") {
+    const fallback = await buildTextSearchResult(trimmedQuestion, dataset, limit, partyOrClub, year, plan);
+    return fallback.intent === "no-results" ? buildUnknownResponse(trimmedQuestion) : fallback;
+  }
+
+  const result = buildIntentResult(intent, trimmedQuestion, dataset, limit, partyOrClub, year);
+  if (intent === "profile" && result.intent === "no-results") {
+    const fallback = await buildTextSearchResult(trimmedQuestion, dataset, limit, partyOrClub, year, plan);
+    if (fallback.intent !== "no-results") {
+      return fallback;
+    }
+  }
+
+  return result;
 }

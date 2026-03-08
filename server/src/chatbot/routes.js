@@ -8,7 +8,7 @@ export function registerChatbotRoutes(app) {
   app.post("/api/chatbot/query", async (req, res) => {
     try {
       const message = String(req.body?.message || "").slice(0, 500);
-      const result = await answerChatbotQuestion(message);
+      const result = await answerChatbotQuestion(message, req.body?.plan || null);
       res.json(result);
     } catch (error) {
       const status = /required/i.test(error?.message || "") ? 400 : 500;

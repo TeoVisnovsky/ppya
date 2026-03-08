@@ -312,7 +312,23 @@ function renderRiskSummary(riskAnalysis) {
       <strong>${escapeHtml(value)}</strong>
     </div>
   `).join("");
-  elements.riskFlags.innerHTML = "";
+
+  const formulaParts = [
+    coefficients.salary_to_income_change_ratio ?? 0,
+    coefficients.asset_item_count_ratio ?? 0,
+    coefficients.other_income_to_average_salary_ratio ?? 0,
+  ].map((value) => Number(value || 0).toFixed(2));
+
+  const notes = [
+    `Live vypocet: ${formulaParts.join(" + ")} = ${score.toFixed(2)}`,
+    "Vzorec: ((tento rok plat / tento rok prijmy) / (minuly rok plat / minuly rok prijmy)) + (assety tento rok / assety minuly rok) + (ine prijmy / priemerna slovenska mzda).",
+  ];
+
+  if (!riskAnalysis?.previous_declaration_id) {
+    notes.push("Chyba predchadzajuce priznanie, takze medzirocne pomery mozu byt prazdne.");
+  }
+
+  elements.riskFlags.innerHTML = notes.map((note) => `<div class="risk-flag">${escapeHtml(note)}</div>`).join("");
 }
 
 function buildMockTimeline(activeDeclaration) {
