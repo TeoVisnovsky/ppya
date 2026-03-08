@@ -1,0 +1,19 @@
+{
+  "name": "ppya",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "dev": "node server/src/index.js",
+    "migrate": "npm --prefix server run migrate",
+    "migrate:all": "npm --prefix server run migrate:all",
+    "scrape": "npm --prefix server run scrape",
+    "scrape:profiles": "npm --prefix server run scrape:profiles",
+    "scrape:voting": "npm --prefix server run scrape:voting",
+    "scrape:social": "npm --prefix server run scrape:social",
+    "link:real-estate": "npm --prefix server run link:real-estate",
+    "estimate:movable-assets": "npm --prefix server run estimate:movable-assets",
+    "postinstall": "npm --prefix server install"
+  }
+}
