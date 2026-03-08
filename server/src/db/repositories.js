@@ -1140,6 +1140,150 @@ ${profileItemsSql}
   return result.rows;
 }
 
+export async function searchSearchableRecords({ searchTerms = [], sourceKeys = [], year = null, limit = 250 } = {}) {
+  const cleanedTerms = Array.from(new Set(
+    searchTerms
+      .map((term) => String(term || "").trim())
+      .filter((term) => term.length >= 2),
+  )).slice(0, 12);
+  const cleanedSourceKeys = Array.from(new Set(
+    sourceKeys
+      .map((sourceKey) => String(sourceKey || "").trim())
+      .filter(Boolean),
+  )).slice(0, 16);
+
+  if (!cleanedTerms.length && !cleanedSourceKeys.length) {
+    return [];
+  }
+
+  const hasSourceKeys = cleanedSourceKeys.length > 0;
+
+  const declarationTextItemsSql = SNAPSHOT_TEXT_SOURCES.map((source) => `
+        SELECT
+          d.politician_id,
+          d.id AS declaration_id,
+          d.declaration_year,
+          '${source.sourceKey}' AS source_key,
+          '${source.sourceLabel}' AS source_label,
+          items.item_text AS item_text
+        FROM declarations d
+        JOIN ${source.tableName} items ON items.declaration_id = d.id
+      `).join("\n      UNION ALL\n");
+
+  const profileItemsSql = SNAPSHOT_PROFILE_SOURCES.map((source) => `
+        SELECT
+          p.id AS politician_id,
+          latest.declaration_id,
+          latest.declaration_year,
+          '${source.sourceKey}' AS source_key,
+          '${source.sourceLabel}' AS source_label,
+          p.${source.columnName} AS item_text
+        FROM politicians p
+        LEFT JOIN latest_declarations latest ON latest.politician_id = p.id
+        WHERE p.${source.columnName} IS NOT NULL
+      `).join("\n      UNION ALL\n");
+
+  const result = await pool.query(
+    `
+      WITH latest_declarations AS (
+        SELECT DISTINCT ON (d.politician_id)
+          d.politician_id,
+          d.id AS declaration_id,
+          d.declaration_year
+        FROM declarations d
+        ORDER BY d.politician_id, d.declaration_year DESC NULLS LAST, d.id DESC
+      ),
+      search_items AS (
+${declarationTextItemsSql}
+        UNION ALL
+        SELECT
+          d.politician_id,
+          d.id AS declaration_id,
+          d.declaration_year,
+          'income' AS source_key,
+          'Income text' AS source_label,
+          income.income_text AS item_text
+        FROM declarations d
+        JOIN declaration_income income ON income.declaration_id = d.id
+        WHERE income.income_text IS NOT NULL
+        UNION ALL
+        SELECT
+          d.politician_id,
+          d.id AS declaration_id,
+          d.declaration_year,
+          'incompatibility' AS source_key,
+          'Incompatibility conditions' AS source_label,
+          incompatibility.response_text AS item_text
+        FROM declarations d
+        JOIN declaration_incompatibility_conditions incompatibility ON incompatibility.declaration_id = d.id
+        WHERE incompatibility.response_text IS NOT NULL
+        UNION ALL
+        SELECT
+          d.politician_id,
+          d.id AS declaration_id,
+          d.declaration_year,
+          'publicFunction' AS source_key,
+          'Public function' AS source_label,
+          d.public_function AS item_text
+        FROM declarations d
+        WHERE d.public_function IS NOT NULL
+        UNION ALL
+${profileItemsSql}
+      ),
+      matched_items AS (
+        SELECT
+          search_item.politician_id,
+          search_item.declaration_id,
+          search_item.declaration_year,
+          search_item.source_key,
+          search_item.source_label,
+          search_item.item_text,
+          CASE
+            WHEN COALESCE(array_length($1::text[], 1), 0) = 0 THEN 0
+            ELSE (
+              SELECT COUNT(*)::INT
+              FROM unnest($1::text[]) term
+              WHERE REGEXP_REPLACE(LOWER(search_item.item_text), '(.)\\1+', '\\1', 'g')
+                LIKE '%' || REGEXP_REPLACE(LOWER(term), '(.)\\1+', '\\1', 'g') || '%'
+            )
+          END AS term_match_count
+        FROM search_items search_item
+        WHERE ($3::BOOLEAN = FALSE OR search_item.source_key = ANY($2::text[]))
+          AND ($4::INT IS NULL OR search_item.declaration_year = $4::INT)
+      )
+      SELECT
+        p.id AS politician_id,
+        p.full_name,
+        matched_items.declaration_id,
+        matched_items.declaration_year,
+        matched_items.source_key,
+        matched_items.source_label,
+        matched_items.item_text,
+        matched_items.term_match_count,
+        COUNT(*) OVER (PARTITION BY matched_items.politician_id) AS politician_match_count
+      FROM matched_items
+      JOIN politicians p ON p.id = matched_items.politician_id
+      WHERE (
+        COALESCE(array_length($1::text[], 1), 0) = 0
+        OR matched_items.term_match_count > 0
+      )
+      ORDER BY
+        COUNT(*) OVER (PARTITION BY matched_items.politician_id) DESC,
+        matched_items.term_match_count DESC,
+        matched_items.declaration_year DESC NULLS LAST,
+        p.full_name ASC,
+        matched_items.item_text ASC
+      LIMIT $5::INT
+    `,
+    [cleanedTerms, cleanedSourceKeys, hasSourceKeys, year, limit],
+  );
+
+  return result.rows.map((row) => ({
+    ...row,
+    semantic_similarity: 0,
+  }));
+}
+
 export async function listPoliticianVotingStats(limit = 5000) {
   const result = await pool.query(
     `

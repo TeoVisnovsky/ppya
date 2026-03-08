@@ -396,6 +396,106 @@ body::before {
   gap: 14px;
 }
 
+.table-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(22, 20, 17, 0.08);
+  box-shadow: 0 16px 30px rgba(24, 18, 11, 0.05);
+}
+
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.table-toolbar h4 {
+  margin: 0 0 4px;
+  font-family: "Fraunces", serif;
+  font-size: 1.15rem;
+}
+
+.table-toolbar p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.table-export-button {
+  border: 1px solid rgba(15, 118, 110, 0.24);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent-strong);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.table-export-button:hover,
+.table-export-button:focus-visible {
+  outline: none;
+  background: rgba(15, 118, 110, 0.14);
+  border-color: rgba(15, 118, 110, 0.34);
+}
+
+.results-table-wrap {
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid rgba(22, 20, 17, 0.08);
+  background: rgba(255, 252, 247, 0.86);
+}
+
+.results-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+}
+
+.results-table th,
+.results-table td {
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(22, 20, 17, 0.08);
+}
+
+.results-table th {
+  position: sticky;
+  top: 0;
+  background: #f6efe3;
+  z-index: 1;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.results-table td {
+  font-size: 0.96rem;
+  line-height: 1.5;
+}
+
+.results-table tbody tr:hover {
+  background: rgba(15, 118, 110, 0.04);
+}
+
+.table-link {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.table-link:hover,
+.table-link:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
 .result-card {
   display: grid;
   gap: 14px;
@@ -535,5 +635,13 @@ body::before {
 
   .result-card-top {
     flex-direction: column;
+  }
+
+  .table-toolbar {
+    flex-direction: column;
+  }
+
+  .table-export-button {
+    width: 100%;
   }
 }

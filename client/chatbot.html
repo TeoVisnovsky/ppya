@@ -32,8 +32,8 @@
             <ul class="hero-points">
               <li>Rank politicians by assets, income, or risk</li>
               <li>Filter answers by party, club, or year</li>
-              <li>Search latest snapshot text across assets, jobs, gifts, liabilities, and profiles</li>
-              <li>Show compact politician cards with the latest facts</li>
+              <li>Identify the relevant tables for natural-language database queries</li>
+              <li>Show result tables you can export as CSV</li>
             </ul>
           </aside>
         </header>
@@ -50,6 +50,7 @@
             <div id="suggestionBar" class="suggestion-bar" aria-label="Suggested prompts">
               <button class="suggestion-chip" type="button" data-prompt="Who has the most assets?">Most assets</button>
               <button class="suggestion-chip" type="button" data-prompt="Show the top 5 highest-income politicians.">Highest income</button>
+              <button class="suggestion-chip" type="button" data-prompt="Give me all politicians that own motorcycles in 2024.">Motorcycles 2024</button>
               <button class="suggestion-chip" type="button" data-prompt="Who has liabilities?">Liabilities</button>
               <button class="suggestion-chip" type="button" data-prompt="Who has a car with brand VOLVO?">VOLVO car</button>
               <button class="suggestion-chip" type="button" data-prompt="Tell me about Robert Fico.">Profile lookup</button>
@@ -65,7 +66,7 @@
                   name="message"
                   rows="1"
                   maxlength="500"
-                  placeholder="Ask a question like 'Who has a car with brand VOLVO?'"
+                  placeholder="Ask a question like 'Give me all politicians that own motorcycles in 2024.'"
                   required
                 ></textarea>
               </label>

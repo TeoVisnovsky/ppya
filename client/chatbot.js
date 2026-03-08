@@ -92,6 +92,86 @@ function buildRelatedGrid(items = []) {
   `;
 }
 
+function buildResultTable(table) {
+  if (!table || !Array.isArray(table.rows) || !table.rows.length) {
+    return "";
+  }
+
+  return `
+    <section class="table-panel">
+      <div class="table-toolbar">
+        <div>
+          <h4>${escapeHtml(table.title || "Matching records")}</h4>
+          <p>${escapeHtml(table.description || "")}</p>
+        </div>
+        <button class="table-export-button" type="button" data-action="export-csv">Download CSV</button>
+      </div>
+      <div class="results-table-wrap">
+        <table class="results-table">
+          <thead>
+            <tr>
+              ${table.columns.map((column) => `<th scope="col">${escapeHtml(column.label)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${table.rows.map((row) => `
+              <tr>
+                ${table.columns.map((column) => {
+                  const value = row[column.key] ?? "";
+                  const link = column.linkKey ? row[column.linkKey] : null;
+                  if (link) {
+                    return `<td><a class="table-link" href="${escapeHtml(link)}">${escapeHtml(value)}</a></td>`;
+                  }
+
+                  return `<td>${escapeHtml(value)}</td>`;
+                }).join("")}
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function escapeCsv(value) {
+  const text = String(value ?? "");
+  if (!/[",\n]/.test(text)) {
+    return text;
+  }
+
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildCsv(table) {
+  const lines = [];
+  lines.push(table.columns.map((column) => escapeCsv(column.label)).join(","));
+
+  for (const row of table.rows || []) {
+    lines.push(table.columns.map((column) => escapeCsv(row[column.key] ?? "")).join(","));
+  }
+
+  return lines.join("\r\n");
+}
+
+function downloadLatestTable() {
+  const table = state.latestResult?.table;
+  if (!table || !Array.isArray(table.rows) || !table.rows.length) {
+    return;
+  }
+
+  const csv = buildCsv(table);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = table.exportFileName || "chatbot-results.csv";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 function renderAnswerSurface(result) {
   if (!result) {
     elements.answerSurface.className = "answer-surface empty-state";
@@ -122,6 +202,7 @@ function renderAnswerSurface(result) {
         </article>
       `).join("")}
     </div>
+    ${buildResultTable(result.table)}
     ${(result.suggestions || []).length ? `
       <div class="followup-row">
         ${result.suggestions.map((suggestion) => `
@@ -200,6 +281,12 @@ async function submitPrompt(message) {
 
 function bindSuggestionClicks(container) {
   container.addEventListener("click", (event) => {
+    const actionButton = event.target.closest("[data-action='export-csv']");
+    if (actionButton) {
+      downloadLatestTable();
+      return;
+    }
+
     const button = event.target.closest("[data-prompt]");
     if (!button) {
       return;
@@ -222,7 +309,7 @@ function bindEvents() {
 function init() {
   appendMessage(
     "assistant",
-    '<p class="message-copy">Ask me for rankings, politician profiles, or snapshot lookups across assets, gifts, liabilities, jobs, voting, and profile fields. I answer only from the local database-backed backend.</p>',
+    '<p class="message-copy">Ask for database results in plain language. For search-heavy questions, I will identify the relevant tables, rank the strongest match, and show the matching records in a downloadable table.</p>',
   );
   renderAnswerSurface(null);
   bindEvents();
