@@ -4,6 +4,7 @@ import {
   buildRiskAnalysis,
   buildTimelineEntry,
 } from "../analysis/politicianRisk.js";
+import { buildRealEstateKatasterLinkRows } from "../scraper/realEstateKatasterLinks.js";
 import { pool } from "./pool.js";
 
 const CATEGORY_TABLES = {
@@ -395,6 +396,139 @@ async function replaceCategoryItems(client, tableName, declarationId, items) {
   }
 }
 
+async function replaceRealEstateItems(client, declarationId, items) {
+  await client.query(`DELETE FROM declaration_real_estate WHERE declaration_id = $1`, [declarationId]);
+
+  for (const item of items) {
+    const cleaned = item.trim();
+    if (!cleaned) {
+      continue;
+    }
+
+    const insertResult = await client.query(
+      `
+        INSERT INTO declaration_real_estate (declaration_id, item_text, item_hash)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (declaration_id, item_hash)
+        DO NOTHING
+        RETURNING id
+      `,
+      [declarationId, cleaned, stableHash(cleaned)],
+    );
+
+    const realEstateId = insertResult.rows[0]?.id;
+    if (!realEstateId) {
+      continue;
+    }
+
+    const linkRows = await buildRealEstateKatasterLinkRows(cleaned);
+    for (const linkRow of linkRows) {
+      await client.query(
+        `
+          INSERT INTO declaration_real_estate_kataster_links (
+            real_estate_id,
+            cadastral_area_text,
+            cadastral_area_normalized,
+            matched_display_name,
+            cadastral_unit_code,
+            land_register_number,
+            public_pdf_url,
+            match_status,
+            is_ambiguous,
+            updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        `,
+        [
+          realEstateId,
+          linkRow.cadastralArea,
+          linkRow.normalizedCadastralArea,
+          linkRow.matchedDisplayName,
+          linkRow.cadastralUnitCode,
+          linkRow.landRegisterNumber,
+          linkRow.publicPdfUrl,
+          linkRow.matchStatus,
+          linkRow.isAmbiguous,
+        ],
+      );
+    }
+  }
+}
+
+export async function backfillRealEstateKatasterLinks({ limit } = {}, dbPool = pool) {
+  const client = await dbPool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      `
+        SELECT id, item_text
+        FROM declaration_real_estate
+        ORDER BY id ASC
+        LIMIT COALESCE($1::INT, 2147483647)
+      `,
+      [limit ?? null],
+    );
+
+    const summary = {
+      processed: 0,
+      linksInserted: 0,
+      statuses: {},
+    };
+
+    for (const row of result.rows) {
+      await client.query(
+        `DELETE FROM declaration_real_estate_kataster_links WHERE real_estate_id = $1`,
+        [row.id],
+      );
+
+      const linkRows = await buildRealEstateKatasterLinkRows(row.item_text);
+      for (const linkRow of linkRows) {
+        await client.query(
+          `
+            INSERT INTO declaration_real_estate_kataster_links (
+              real_estate_id,
+              cadastral_area_text,
+              cadastral_area_normalized,
+              matched_display_name,
+              cadastral_unit_code,
+              land_register_number,
+              public_pdf_url,
+              match_status,
+              is_ambiguous,
+              updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+          `,
+          [
+            row.id,
+            linkRow.cadastralArea,
+            linkRow.normalizedCadastralArea,
+            linkRow.matchedDisplayName,
+            linkRow.cadastralUnitCode,
+            linkRow.landRegisterNumber,
+            linkRow.publicPdfUrl,
+            linkRow.matchStatus,
+            linkRow.isAmbiguous,
+          ],
+        );
+        summary.linksInserted += 1;
+        summary.statuses[linkRow.matchStatus] = (summary.statuses[linkRow.matchStatus] || 0) + 1;
+      }
+
+      summary.processed += 1;
+    }
+
+    await client.query("COMMIT");
+    return summary;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function saveDeclaration(payload, dbPool = pool) {
   const client = await dbPool.connect();
   try {
@@ -418,6 +552,11 @@ export async function saveDeclaration(payload, dbPool = pool) {
 
     for (const [key, tableName] of Object.entries(CATEGORY_TABLES)) {
       const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
+      if (key === "realEstate") {
+        await replaceRealEstateItems(client, declarationId, items);
+        continue;
+      }
+
       await replaceCategoryItems(client, tableName, declarationId, items);
     }
 
@@ -1030,6 +1169,33 @@ async function fetchItemTable(client, tableName, declarationId) {
   return result.rows.map((row) => row.item_text);
 }
 
+async function fetchRealEstateCategory(client, declarationId) {
+  const result = await client.query(
+    `
+      SELECT id, item_text
+      FROM declaration_real_estate
+      WHERE declaration_id = $1
+      ORDER BY id ASC
+    `,
+    [declarationId],
+  );
+
+  const records = [];
+  for (const row of result.rows) {
+    const katasterLinks = await buildRealEstateKatasterLinkRows(row.item_text);
+    records.push({
+      id: row.id,
+      item_text: row.item_text,
+      kataster_links: katasterLinks,
+    });
+  }
+
+  return {
+    items: result.rows.map((row) => row.item_text),
+    records,
+  };
+}
+
 async function fetchDeclarationTimeline(client, politicianId) {
   const result = await client.query(
     `
@@ -1108,6 +1274,9 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
           deputy_profile_period,
           deputy_profile_url,
           deputy_profile_scraped_at,
+          instagram,
+          facebook,
+          twitter,
           created_at,
           updated_at
         FROM politicians
@@ -1187,6 +1356,16 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
 
     const categories = {};
     for (const [key, tableName] of Object.entries(CATEGORY_TABLES)) {
+      if (key === "realEstate") {
+        const realEstateCategory = await fetchRealEstateCategory(client, declaration.id);
+        categories[key] = {
+          label: CATEGORY_LABELS[key],
+          items: realEstateCategory.items,
+          records: realEstateCategory.records,
+        };
+        continue;
+      }
+
       categories[key] = {
         label: CATEGORY_LABELS[key],
         items: await fetchItemTable(client, tableName, declaration.id),
