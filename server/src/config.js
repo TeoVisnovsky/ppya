@@ -1,6 +1,9 @@
+import path from "node:path";
 import dotenv from "dotenv";
 
-dotenv.config();
+// Load .env from repository root first (root-based runs), then fallback to server/.env.
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
 
 function parseNumber(value, fallback) {
   const parsed = Number(value);
