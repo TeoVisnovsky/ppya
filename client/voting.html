@@ -10,11 +10,11 @@
     <div class="page-shell">
       <header class="hero compact-hero">
         <div>
-          <p class="eyebrow"><a href="/">Spat na zoznam</a></p>
-          <h1>Statistika hlasovani</h1>
-          <p class="hero-copy">Jeden riadok na politika s poctami hlasovani a spojenym textom vsetkych zaznamov.</p>
+          <p class="eyebrow"><a href="/">Späť na zoznam</a></p>
+          <h1>Štatistika hlasovaní</h1>
+          <p class="hero-copy">Jeden riadok na politika s počtami hlasovaní a spojeným textom všetkých záznamov.</p>
           <div class="hero-actions">
-            <a class="table-link" href="/chatbot.html">Otvorit chatbot</a>
+            <a class="table-link" href="/chatbot.html">Otvoriť chatbot</a>
           </div>
         </div>
       </header>
@@ -23,7 +23,7 @@
         <section class="panel filters-panel">
           <div class="panel-header">
             <h2>Filtre</h2>
-            <p>Vyhladaj politika alebo obmedz tabulku na jedno volebne obdobie.</p>
+            <p>Vyhľadaj politika alebo obmedz tabuľku na jedno volebné obdobie.</p>
           </div>
           <div class="filters">
             <label>
@@ -31,29 +31,29 @@
               <input id="votingSearchInput" type="search" placeholder="napr. Fico" />
             </label>
             <label>
-              <span>CisObdobia</span>
+              <span>Číslo obdobia</span>
               <select id="votingPeriodSelect">
-                <option value="">Vsetky obdobia</option>
+                <option value="">Všetky obdobia</option>
               </select>
             </label>
             <label>
               <span>Zoradenie</span>
               <select id="votingSortSelect">
-                <option value="nameAsc">Abecedne podla mena</option>
-                <option value="dateDesc">Najnovsie stiahnute</option>
-                <option value="schodzaAsc">Najmenej zaznamov</option>
+                <option value="nameAsc">Abecedne podľa mena</option>
+                <option value="dateDesc">Najnovšie stiahnuté</option>
+                <option value="schodzaAsc">Najmenej záznamov</option>
                 <option value="voteAsc">Najmenej Za</option>
               </select>
             </label>
-            <button id="votingReloadButton" class="ghost-button" type="button">Obnovit</button>
+            <button id="votingReloadButton" class="ghost-button" type="button">Obnoviť</button>
           </div>
         </section>
 
         <section class="panel table-panel">
           <div class="panel-header inline-header">
             <div>
-              <h2>Tabulka hlasovani</h2>
-              <p id="votingResultsInfo">Nacitavam data...</p>
+              <h2>Tabuľka hlasovaní</h2>
+              <p id="votingResultsInfo">Načítavam dáta...</p>
             </div>
           </div>
 
@@ -63,13 +63,13 @@
                 <tr>
                   <th>Meno</th>
                   <th>UserId</th>
-                  <th>CisObdobia</th>
-                  <th>Zaznamov</th>
+                  <th>Číslo obdobia</th>
+                  <th>Záznamov</th>
                   <th>Za</th>
                   <th>Proti</th>
-                  <th>Zdrzal(a) sa</th>
+                  <th>Zdržal(a) sa</th>
                   <th>Nehlasoval(a)</th>
-                  <th>Nepritomny(a)</th>
+                  <th>Neprítomný(a)</th>
                   <th>Transcript</th>
                 </tr>
               </thead>

@@ -42,20 +42,19 @@
       <header class="hero">
         <div class="hero-copy-block">
           <p class="eyebrow">PPYA</p>
-          <h1>Sleek prehlad majetkov a rizika politikov</h1>
+          <h1>Prehľad majetkov a rizík politikov</h1>
           <p class="hero-copy">
-            Cisty tmavy povrch, rychle filtrovanie a sklenena tabulka pre novinarske prezeranie prijmov,
-            majetku a rizikovych signalov.
+            Prehľadávaj ľahko a rýchlo s PPYA.
           </p>
           <div class="hero-actions">
-            <a class="table-link table-link-primary" href="/voting.html">Otvorit tabulku hlasovani</a>
-            <a class="table-link" href="/chatbot.html">Otvorit chatbot</a>
+            <a class="table-link table-link-primary" href="/chatbot.html">Otvoriť chatbot</a>
+            <a class="table-link" href="/voting.html">Otvoriť tabuľku hlasovaní</a>
           </div>
         </div>
         <div class="hero-aside panel panel-soft">
           <p class="hero-stat-label">Dataset</p>
-          <p class="hero-stat-value">Politici, prijmy, majetok, risk faktor</p>
-          <p class="hero-stat-copy">Vyhladavaj podla mena, funkcie alebo strany a zorad zoznam podla rizika, prijmov alebo velkosti majetku.</p>
+          <p class="hero-stat-value">Politici, príjmy, majetok, rizikový faktor</p>
+          <p class="hero-stat-copy">Vyhľadávaj podľa mena, funkcie alebo strany a zoraď zoznam podľa rizika, príjmov alebo veľkosti majetku.</p>
         </div>
       </header>
 
@@ -64,55 +63,55 @@
           <div class="glass-table-topbar">
             <div class="panel-header">
               <h2>Politici</h2>
-              <p id="resultsInfo">Nacitavam data...</p>
+              <p id="resultsInfo">Načítavam dáta...</p>
             </div>
-            <button id="reloadButton" class="ghost-button" type="button">Obnovit</button>
+            <button id="reloadButton" class="ghost-button" type="button">Obnoviť</button>
           </div>
 
           <div class="toolbar-grid">
             <label class="control control-search control-wide">
               <span>Search</span>
-              <input id="searchInput" type="search" placeholder="Hladaj meno, user ID alebo stranu" />
+              <input id="searchInput" type="search" placeholder="Hľadaj meno, user ID alebo stranu" />
             </label>
             <label class="control">
               <span>Funkcia</span>
               <input id="functionInput" type="search" placeholder="napr. poslanec" />
             </label>
             <label class="control">
-              <span>Politicka strana</span>
+              <span>Politická strana</span>
               <select id="partySelect">
-                <option value="">Vsetky strany</option>
+                <option value="">Všetky strany</option>
               </select>
             </label>
             <label class="control">
               <span>Rok</span>
               <select id="yearSelect">
-                <option value="">Vsetky roky</option>
+                <option value="">Všetky roky</option>
               </select>
             </label>
             <label class="control">
               <span>Risk faktor</span>
               <select id="riskSelect">
-                <option value="all">Vsetky urovne</option>
-                <option value="high">Vysoke</option>
-                <option value="medium">Stredne</option>
-                <option value="low">Nizke</option>
-                <option value="none">Bez signalu</option>
+                <option value="all">Všetky úrovne</option>
+                <option value="high">Vysoké</option>
+                <option value="medium">Stredné</option>
+                <option value="low">Nízke</option>
+                <option value="none">Bez signálu</option>
               </select>
             </label>
             <label class="control">
               <span>Zoradenie</span>
               <select id="sortSelect">
-                <option value="riskDesc" selected>Riziko od najvyssieho</option>
+                <option value="riskDesc" selected>Riziko od najvyššieho</option>
                 <option value="firstNameAsc">Meno A-Z</option>
                 <option value="surnameAsc">Priezvisko A-Z</option>
-                <option value="yearDesc">Rok od najnovsieho</option>
-                <option value="yearAsc">Rok od najstarsieho</option>
-                <option value="incomeDesc">Prijmy od najvyssich</option>
-                <option value="incomeAsc">Prijmy od najnizsich</option>
-                <option value="wealthDesc">Velkost majetku od najvacsieho</option>
-                <option value="wealthAsc">Velkost majetku od najmensieho</option>
-                <option value="riskAsc">Riziko od najnizsieho</option>
+                <option value="yearDesc">Rok od najnovšieho</option>
+                <option value="yearAsc">Rok od najstaršieho</option>
+                <option value="incomeDesc">Príjmy od najvyšších</option>
+                <option value="incomeAsc">Príjmy od najnižších</option>
+                <option value="wealthDesc">Veľkosť majetku od najväčšieho</option>
+                <option value="wealthAsc">Veľkosť majetku od najmenšieho</option>
+                <option value="riskAsc">Riziko od najnižšieho</option>
               </select>
             </label>
           </div>
@@ -123,9 +122,9 @@
                 <tr>
                   <th>Meno</th>
                   <th>Funkcia</th>
-                  <th>Politicka strana</th>
-                  <th>Prijmy</th>
-                  <th>Velkost majetku</th>
+                  <th>Politická strana</th>
+                  <th>Príjmy</th>
+                  <th>Veľkosť majetku</th>
                   <th>Risk faktor</th>
                 </tr>
               </thead>

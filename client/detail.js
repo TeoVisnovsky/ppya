@@ -153,7 +153,7 @@ function buildRealEstateRows(category) {
     const row = {
       ...parseRealEstateItem(record.item_text),
       __katasterLinks: Array.isArray(record.kataster_links) ? record.kataster_links : [],
-      "Odhadovana cena": record.estimated_price_label || "-",
+      "Odhadovaná cena": record.estimated_price_label || "-",
     };
 
     return row;
@@ -171,7 +171,7 @@ function getStructuredCategoryRows(categoryKey, items) {
 function renderLvButtons(katasterLinks) {
   const usableLinks = katasterLinks.filter((link) => link?.publicPdfUrl);
   if (!usableLinks.length) {
-    return '<span class="muted-inline">LV nedostupne</span>';
+    return '<span class="muted-inline">LV nedostupné</span>';
   }
 
   return `
@@ -270,7 +270,7 @@ function buildRealEstateMapRecords(category) {
 
       return {
         id: record.id,
-        type: String(parsed.Typ || "Nehnutelnost"),
+        type: String(parsed.Typ || "Nehnuteľnosť"),
         cadastralArea,
         landRegisterNumbers: extractLandRegisterNumbers(record.item_text),
         katasterLinks: links,
@@ -324,12 +324,12 @@ async function geocodeCadastralArea(cadastralArea) {
 
 function renderRealEstateMapSection() {
   return `
-    <section class="real-estate-map-section" aria-label="Mapa nehnutelnosti politika">
+    <section class="real-estate-map-section" aria-label="Mapa nehnuteľností politika">
       <div class="real-estate-map-heading">
-        <h4>Mapa nehnutelnosti na Slovensku</h4>
-        <p id="realEstateMapStatus" class="real-estate-map-status">Nacitavam mapu...</p>
+        <h4>Mapa nehnuteľností na Slovensku</h4>
+        <p id="realEstateMapStatus" class="real-estate-map-status">Načítavam mapu...</p>
       </div>
-      <div id="realEstateMap" class="real-estate-map" role="img" aria-label="Mapa Slovenska s nehnutelnostami"></div>
+      <div id="realEstateMap" class="real-estate-map" role="img" aria-label="Mapa Slovenska s nehnuteľnosťami"></div>
     </section>
   `;
 }
@@ -345,12 +345,12 @@ async function renderRealEstateMap(category) {
 
   const entries = buildRealEstateMapRecords(category);
   if (!entries.length) {
-    statusElement.textContent = "Pre tuto deklaraciu sa nenasli pouzitelne kat. uzemia.";
+    statusElement.textContent = "Pre túto deklaráciu sa nenašli použiteľné kat. územia.";
     return;
   }
 
   if (typeof window.L === "undefined") {
-    statusElement.textContent = "Mapova kniznica sa nepodarila nacitat.";
+    statusElement.textContent = "Mapová knižnica sa nepodarila načítať.";
     return;
   }
 
@@ -376,7 +376,7 @@ async function renderRealEstateMap(category) {
 
   const located = geocodedEntries.filter((entry) => entry.coords);
   if (!located.length) {
-    statusElement.textContent = "Nepodarilo sa geokodovat kat. uzemia pre mapu.";
+    statusElement.textContent = "Nepodarilo sa geokódovať kat. územia pre mapu.";
     return;
   }
 
@@ -411,8 +411,8 @@ async function renderRealEstateMap(category) {
 
   const missingCount = entries.length - located.length;
   statusElement.textContent = missingCount > 0
-    ? `Zobrazene: ${located.length}/${entries.length}. ${missingCount} poloziek sa nepodarilo lokalizovat.`
-    : `Zobrazene vsetky nehnutelnosti (${located.length}).`;
+    ? `Zobrazené: ${located.length}/${entries.length}. ${missingCount} položiek sa nepodarilo lokalizovať.`
+    : `Zobrazené všetky nehnuteľnosti (${located.length}).`;
 
   window.setTimeout(() => {
     map.invalidateSize();
@@ -422,7 +422,7 @@ async function renderRealEstateMap(category) {
 function renderRealEstateCategoryTable(category) {
   const rows = buildRealEstateRows(category);
   if (!rows.length) {
-    return `${renderRealEstateMapSection()}<div class="muted-inline">Bez zaznamov nehnutelnosti.</div>`;
+    return `${renderRealEstateMapSection()}<div class="muted-inline">Bez záznamov nehnuteľností.</div>`;
   }
 
   let columns = [];
@@ -439,8 +439,8 @@ function renderRealEstateCategoryTable(category) {
   }
 
   // Keep estimated price immediately next to LV for quick scanning.
-  columns = columns.filter((column) => column !== "Odhadovana cena" && column !== "LV");
-  columns.push("Odhadovana cena");
+  columns = columns.filter((column) => column !== "Odhadovaná cena" && column !== "LV");
+  columns.push("Odhadovaná cena");
   columns.push("LV");
 
   const header = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
@@ -510,8 +510,8 @@ function renderCategoryCard(categoryKey, category) {
   if (!category?.items?.length) {
     return `
       <article class="category-card category-card-empty">
-        <h3>${escapeHtml(category?.label || "Bez nazvu")}</h3>
-        <p class="category-empty">Bez zaznamu.</p>
+        <h3>${escapeHtml(category?.label || "Bez názvu")}</h3>
+        <p class="category-empty">Bez záznamu.</p>
       </article>
     `;
   }
@@ -538,24 +538,24 @@ function renderCategoryCard(categoryKey, category) {
 
 function renderSummary(activeDeclaration) {
   const items = [
-    ["Interne cislo", escapeHtml(activeDeclaration.internal_number || "-"), false],
-    ["ID oznamenia", escapeHtml(activeDeclaration.declaration_identifier || "-"), false],
+    ["Interné číslo", escapeHtml(activeDeclaration.internal_number || "-"), false],
+    ["ID oznámenia", escapeHtml(activeDeclaration.declaration_identifier || "-"), false],
     ["Rok", escapeHtml(activeDeclaration.declaration_year || "-"), false],
-    ["Podane", escapeHtml(activeDeclaration.submitted_when || "-"), false],
-    ["Verejna funkcia", escapeHtml(activeDeclaration.public_function || "-"), false],
-    ["Prijmy", escapeHtml(activeDeclaration.income_text || "-"), false],
-    ["Prijmy z verejnej funkcie", escapeHtml(activeDeclaration.public_function_income_amount || "-"), false],
-    ["Ine prijmy", escapeHtml(activeDeclaration.other_income_amount || "-"), false],
-    ["Prijmy spolu", escapeHtml(activeDeclaration.total_income_amount || "-"), false],
-    ["Podiel platu na prijmoch", escapeHtml(activeDeclaration.salary_to_income_ratio ?? "-"), false],
-    ["Ine prijmy / priemerna rocna mzda", escapeHtml(activeDeclaration.other_income_to_average_salary_ratio ?? "-"), false],
-    ["Pocet majetkovych poloziek", escapeHtml(activeDeclaration.asset_item_count ?? 0), false],
-    ["Pocet vedlajsich aktivit", escapeHtml(activeDeclaration.side_job_count ?? 0), false],
-    ["Nezlucitelnost", escapeHtml(activeDeclaration.incompatibility || "-"), false],
+    ["Podané", escapeHtml(activeDeclaration.submitted_when || "-"), false],
+    ["Verejná funkcia", escapeHtml(activeDeclaration.public_function || "-"), false],
+    ["Príjmy", escapeHtml(activeDeclaration.income_text || "-"), false],
+    ["Príjmy z verejnej funkcie", escapeHtml(activeDeclaration.public_function_income_amount || "-"), false],
+    ["Iné príjmy", escapeHtml(activeDeclaration.other_income_amount || "-"), false],
+    ["Príjmy spolu", escapeHtml(activeDeclaration.total_income_amount || "-"), false],
+    ["Podiel platu na príjmoch", escapeHtml(activeDeclaration.salary_to_income_ratio ?? "-"), false],
+    ["Iné príjmy / priemerná ročná mzda", escapeHtml(activeDeclaration.other_income_to_average_salary_ratio ?? "-"), false],
+    ["Počet majetkových položiek", escapeHtml(activeDeclaration.asset_item_count ?? 0), false],
+    ["Počet vedľajších aktivít", escapeHtml(activeDeclaration.side_job_count ?? 0), false],
+    ["Nezlučiteľnosť", escapeHtml(activeDeclaration.incompatibility || "-"), false],
     [
       "Zdroj",
       activeDeclaration.source_url
-        ? `<a href="${escapeHtml(activeDeclaration.source_url)}" target="_blank" rel="noreferrer">otvorit zdroj</a>`
+        ? `<a href="${escapeHtml(activeDeclaration.source_url)}" target="_blank" rel="noreferrer">otvoriť zdroj</a>`
         : "-",
       true,
     ],
@@ -758,16 +758,16 @@ function renderProfileMeta(politician) {
     ["Meno", politician.deputy_first_name || "-"],
     ["Priezvisko", politician.deputy_last_name || "-"],
     ["Kandidoval(a) za", candidatePartyList],
-    ["Parlamentny klub", politician.parliamentary_club || "-"],
-    ["Narodeny(a)", politician.deputy_birth_date_text || "-"],
-    ["Narodnost", politician.deputy_nationality || "-"],
+    ["Parlamentný klub", politician.parliamentary_club || "-"],
+    ["Narodený(á)", politician.deputy_birth_date_text || "-"],
+    ["Národnosť", politician.deputy_nationality || "-"],
     ["Bydlisko", politician.deputy_residence || "-"],
     ["Kraj", politician.deputy_region || "-"],
-    ["Aktualne volebne obdobie", politician.deputy_term_info?.current_term_label || "-"],
-    ["Posobenie v parlamente", politician.deputy_term_info?.parliament_service || "-"],
-    ["Posobenie v tomto obdobi", politician.deputy_term_info?.current_term_service || "-"],
+    ["Aktuálne volebné obdobie", politician.deputy_term_info?.current_term_label || "-"],
+    ["Pôsobenie v parlamente", politician.deputy_term_info?.parliament_service || "-"],
+    ["Pôsobenie v tomto období", politician.deputy_term_info?.current_term_service || "-"],
     [
-      "Poslanecke clenstva",
+      "Poslanecké členstvá",
       Array.isArray(politician.parliamentary_memberships) && politician.parliamentary_memberships.length
         ? politician.parliamentary_memberships.join(" | ")
         : "-",
@@ -789,21 +789,21 @@ function renderRiskSummary(riskAnalysis) {
   const level = String(riskAnalysis?.risk_level || "none");
   const score = Number(riskAnalysis?.risk_factor) || 0;
   const labels = {
-    high: "Vysoke riziko",
-    medium: "Stredne riziko",
-    low: "Nizke riziko",
-    none: "Bez signalov",
+    high: "Vysoké riziko",
+    medium: "Stredné riziko",
+    low: "Nízke riziko",
+    none: "Bez signálov",
   };
   const coefficients = riskAnalysis?.coefficients || {};
   const items = [
     ["Risk faktor", `${labels[level] || labels.none} (${score.toFixed(2)})`],
-    ["Tento rok plat / prijmy", coefficients.current_salary_to_income_ratio ?? "-"],
-    ["Minuly rok plat / prijmy", coefficients.previous_salary_to_income_ratio ?? "-"],
-    ["Pomer tohto a minuleho roku", coefficients.salary_to_income_change_ratio ?? "-"],
+    ["Tento rok plat / príjmy", coefficients.current_salary_to_income_ratio ?? "-"],
+    ["Minulý rok plat / príjmy", coefficients.previous_salary_to_income_ratio ?? "-"],
+    ["Pomer tohto a minulého roku", coefficients.salary_to_income_change_ratio ?? "-"],
     ["Assety tento rok", riskAnalysis?.current_asset_item_count ?? 0],
-    ["Assety minuly rok", riskAnalysis?.previous_asset_item_count ?? 0],
-    ["Pomer poctu majetkovych poloziek", coefficients.asset_item_count_ratio ?? "-"],
-    ["Ine prijmy / priemerna mzda", coefficients.other_income_to_average_salary_ratio ?? "-"],
+    ["Assety minulý rok", riskAnalysis?.previous_asset_item_count ?? 0],
+    ["Pomer počtu majetkových položiek", coefficients.asset_item_count_ratio ?? "-"],
+    ["Iné príjmy / priemerná mzda", coefficients.other_income_to_average_salary_ratio ?? "-"],
   ];
 
   elements.riskSummary.innerHTML = items.map(([label, value]) => `
@@ -820,12 +820,12 @@ function renderRiskSummary(riskAnalysis) {
   ].map((value) => Number(value || 0).toFixed(2));
 
   const notes = [
-    `Live vypocet: ${formulaParts.join(" + ")} = ${score.toFixed(2)}`,
-    "Vzorec: ((tento rok plat / tento rok prijmy) / (minuly rok plat / minuly rok prijmy)) + (assety tento rok / assety minuly rok) + (ine prijmy / priemerna slovenska mzda).",
+    `Live výpočet: ${formulaParts.join(" + ")} = ${score.toFixed(2)}`,
+    "Vzorec: ((tento rok plat / tento rok príjmy) / (minulý rok plat / minulý rok príjmy)) + (assety tento rok / assety minulý rok) + (iné príjmy / priemerná slovenská mzda).",
   ];
 
   if (!riskAnalysis?.previous_declaration_id) {
-    notes.push("Chyba predchadzajuce priznanie, takze medzirocne pomery mozu byt prazdne.");
+    notes.push("Chýba predchádzajúce priznanie, takže medziročné pomery môžu byť prázdne.");
   }
 
   elements.riskFlags.innerHTML = notes.map((note) => `<div class="risk-flag">${escapeHtml(note)}</div>`).join("");
@@ -867,10 +867,10 @@ function renderMockTimelineChart(activeDeclaration) {
       <div class="mock-chart-copy">
         <p class="mock-chart-kicker">Mock preview</p>
         <h3>Posledne tri roky</h3>
-        <p class="mock-chart-disclaimer">Tento graf je ilustračny a nezobrazuje realne historicke data.</p>
+        <p class="mock-chart-disclaimer">Tento graf je ilustračný a nezobrazuje reálne historické dáta.</p>
       </div>
       <div class="mock-chart-stage">
-        <svg class="mock-chart-svg" viewBox="0 0 360 210" role="img" aria-label="Mock graf poslednych troch rokov">
+        <svg class="mock-chart-svg" viewBox="0 0 360 210" role="img" aria-label="Mock graf posledných troch rokov">
           <defs>
             <linearGradient id="mock-line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stop-color="rgba(255,255,255,0.55)" />
@@ -893,8 +893,8 @@ function renderMockTimelineChart(activeDeclaration) {
         ${series.map((point) => `
           <div class="mock-chart-metric">
             <span>${escapeHtml(point.year)}</span>
-            <strong>${escapeHtml(point.assetIndex)} poloziek</strong>
-            <small>Mock prijmy ${escapeHtml(point.incomeIndex.toLocaleString("sk-SK"))} EUR</small>
+            <strong>${escapeHtml(point.assetIndex)} položiek</strong>
+            <small>Mock príjmy ${escapeHtml(point.incomeIndex.toLocaleString("sk-SK"))} EUR</small>
           </div>
         `).join("")}
       </div>
@@ -907,12 +907,12 @@ function renderCategories(activeDeclaration) {
 
   const categories = activeDeclaration?.categories || {};
   const realEstateCategory = categories.realEstate || {
-    label: "Vlastnictvo nehnutelnej veci",
+    label: "Vlastníctvo nehnuteľnej veci",
     items: [],
     records: [],
   };
   const movableAssetsCategory = categories.movableAssets || {
-    label: "Vlastnictvo hnutelnej veci",
+    label: "Vlastníctvo hnuteľnej veci",
     items: [],
   };
 
@@ -921,7 +921,7 @@ function renderCategories(activeDeclaration) {
   renderRealEstateMap(realEstateCategory).catch(() => {
     const statusElement = document.querySelector("#realEstateMapStatus");
     if (statusElement) {
-      statusElement.textContent = "Pri nacitani mapy nastala chyba.";
+      statusElement.textContent = "Pri načítaní mapy nastala chyba.";
     }
   });
 
@@ -944,7 +944,7 @@ function renderCategories(activeDeclaration) {
 
   elements.categoriesContainer.innerHTML = remainingCards.length
     ? remainingCards.join("")
-    : '<div class="error-box">Zatial nie su k dispozicii dalsie kategorie.</div>';
+    : '<div class="error-box">Zatiaľ nie sú k dispozícii ďalšie kategórie.</div>';
 }
 
 function renderDeclarationOptions(declarations, activeId) {
@@ -960,17 +960,17 @@ function renderDeclarationOptions(declarations, activeId) {
 }
 
 function renderEmpty() {
-  elements.detailSubtitle.textContent = "Pre tohto politika zatial nie je ulozene priznanie.";
+  elements.detailSubtitle.textContent = "Pre tohto politika zatiaľ nie je uložené priznanie.";
   elements.profilePhoto.innerHTML = "";
   elements.profileContact.innerHTML = "";
   elements.profileMeta.innerHTML = "";
   elements.summaryList.innerHTML = "";
   elements.timelineContainer.innerHTML = "";
-  elements.realEstateContainer.innerHTML = '<div class="error-box">Zatial nie su k dispozicii ziadne data.</div>';
-  elements.movableAssetsContainer.innerHTML = '<div class="error-box">Zatial nie su k dispozicii ziadne data.</div>';
+  elements.realEstateContainer.innerHTML = '<div class="error-box">Zatiaľ nie sú k dispozícii žiadne dáta.</div>';
+  elements.movableAssetsContainer.innerHTML = '<div class="error-box">Zatiaľ nie sú k dispozícii žiadne dáta.</div>';
   elements.riskSummary.innerHTML = "";
   elements.riskFlags.innerHTML = "";
-  elements.categoriesContainer.innerHTML = '<div class="error-box">Zatial nie su k dispozicii ziadne data.</div>';
+  elements.categoriesContainer.innerHTML = '<div class="error-box">Zatiaľ nie sú k dispozícii žiadne dáta.</div>';
   elements.declarationSelect.innerHTML = "";
   destroyRealEstateMap();
 }
@@ -985,7 +985,7 @@ async function loadDetail(declarationId) {
   const payload = await response.json();
 
   if (!response.ok || !payload.ok) {
-    throw new Error(payload.error || "Nepodarilo sa nacitat detail politika.");
+    throw new Error(payload.error || "Nepodarilo sa načítať detail politika.");
   }
 
   const { politician, declarations, activeDeclaration, timeline, riskAnalysis } = payload.detail;
@@ -1008,7 +1008,7 @@ async function loadDetail(declarationId) {
 }
 
 function renderError(error) {
-  elements.detailSubtitle.textContent = "Chyba pri nacitani detailu";
+  elements.detailSubtitle.textContent = "Chyba pri načítaní detailu";
   elements.profilePhoto.innerHTML = "";
   elements.profileContact.innerHTML = "";
   elements.profileMeta.innerHTML = "";

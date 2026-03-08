@@ -33,7 +33,7 @@ function renderRows(rows) {
   if (!rows.length) {
     elements.tableBody.innerHTML = `
       <tr>
-        <td colspan="10"><div class="error-box">Ziadne vysledky pre aktualny filter.</div></td>
+        <td colspan="10"><div class="error-box">Žiadne výsledky pre aktuálny filter.</div></td>
       </tr>
     `;
     return;
@@ -60,7 +60,7 @@ function populatePeriodFilter(rows) {
     .sort((left, right) => right - left);
 
   elements.periodSelect.innerHTML = [
-    '<option value="">Vsetky obdobia</option>',
+    '<option value="">Všetky obdobia</option>',
     ...periods.map((period) => `<option value="${period}">${period}</option>`),
   ].join("");
 }
@@ -103,12 +103,12 @@ function applyFilters() {
   });
 
   const sorted = sortRows(filtered);
-  elements.resultsInfo.textContent = `${sorted.length} / ${state.rows.length} zaznamov`;
+  elements.resultsInfo.textContent = `${sorted.length} / ${state.rows.length} záznamov`;
   renderRows(sorted);
 }
 
 async function loadVotingStats() {
-  elements.resultsInfo.textContent = "Nacitavam data...";
+  elements.resultsInfo.textContent = "Načítavam dáta...";
   const response = await fetch("/api/voting-transcripts?limit=5000");
   let payload = null;
 
@@ -124,14 +124,14 @@ async function loadVotingStats() {
     }
 
     if (response.status === 404) {
-      throw new Error("API route /api/voting-transcripts nie je dostupna. Restartuj aktualny server.");
+      throw new Error("API route /api/voting-transcripts nie je dostupná. Reštartuj aktuálny server.");
     }
 
     if (response.status >= 500) {
-      throw new Error("Server vratil neplatnu odpoved. Skontroluj migracie a restart servera.");
+      throw new Error("Server vrátil neplatnú odpoveď. Skontroluj migrácie a reštart servera.");
     }
 
-    throw new Error("Nepodarilo sa nacitat hlasovania.");
+    throw new Error("Nepodarilo sa načítať hlasovania.");
   }
 
   state.rows = payload.rows;
@@ -140,10 +140,10 @@ async function loadVotingStats() {
 }
 
 function renderError(error) {
-  elements.resultsInfo.textContent = "Chyba pri nacitani";
+  elements.resultsInfo.textContent = "Chyba pri načítaní";
   elements.tableBody.innerHTML = `
     <tr>
-      <td colspan="10"><div class="error-box">${escapeHtml(error.message || "Nepodarilo sa nacitat data.")}</div></td>
+      <td colspan="10"><div class="error-box">${escapeHtml(error.message || "Nepodarilo sa načítať dáta.")}</div></td>
     </tr>
   `;
 }

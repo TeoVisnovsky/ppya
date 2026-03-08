@@ -105,7 +105,7 @@ function renderSchema(result) {
   elements.schemaContainer.innerHTML = `
     <div class="db-schema-summary">
       <div class="db-schema-stat">
-        <span>Stlpce</span>
+        <span>Stĺpce</span>
         <strong>${escapeHtml(columnDefinitions.length)}</strong>
       </div>
       <div class="db-schema-stat">
@@ -113,7 +113,7 @@ function renderSchema(result) {
         <strong>${escapeHtml(result.totalCount)}</strong>
       </div>
       <div class="db-schema-stat">
-        <span>Nacitane</span>
+        <span>Načítané</span>
         <strong>${escapeHtml(result.rows.length)}</strong>
       </div>
     </div>
@@ -135,8 +135,8 @@ function renderTables() {
   ));
 
   if (!visibleTables.length) {
-    elements.tablesList.innerHTML = '<div class="error-box">Ziadne tabulky.</div>';
-    elements.tablesInfo.textContent = state.tableQuery ? "0 tabuliek pre hladany vyraz" : "Ziadne tabulky";
+    elements.tablesList.innerHTML = '<div class="error-box">Žiadne tabuľky.</div>';
+    elements.tablesInfo.textContent = state.tableQuery ? "0 tabuliek pre hľadaný výraz" : "Žiadne tabuľky";
     return;
   }
 
@@ -169,12 +169,12 @@ function renderRows(result) {
   const visibleRows = result.rows.filter((row) => rowMatchesQuery(row, columnDefinitions, rowQuery));
 
   if (!result.rows.length) {
-    elements.tableContainer.innerHTML = '<div class="error-box">Tabulka je prazdna.</div>';
+    elements.tableContainer.innerHTML = '<div class="error-box">Tabuľka je prázdna.</div>';
     return;
   }
 
   if (!visibleRows.length) {
-    elements.tableContainer.innerHTML = '<div class="error-box">Pre aktualny filter riadkov neexistuje zhoda.</div>';
+    elements.tableContainer.innerHTML = '<div class="error-box">Pre aktuálny filter riadkov neexistuje zhoda.</div>';
     return;
   }
 
@@ -196,11 +196,11 @@ function renderRows(result) {
     </table>
   `;
 
-  elements.tableMeta.textContent = `Zobrazenych ${visibleRows.length} z ${result.rows.length} nacitanych | celkom ${result.totalCount} riadkov | ${columnDefinitions.length} stlpcov | offset ${state.offset}`;
+  elements.tableMeta.textContent = `Zobrazených ${visibleRows.length} z ${result.rows.length} načítaných | celkom ${result.totalCount} riadkov | ${columnDefinitions.length} stĺpcov | offset ${state.offset}`;
 }
 
 async function loadTables() {
-  elements.tablesInfo.textContent = "Nacitavam...";
+  elements.tablesInfo.textContent = "Načítavam...";
   const payload = await fetchJson("/api/admin/tables");
   state.tables = payload.rows;
   if (!state.selectedTable && state.tables[0]) {
@@ -218,7 +218,7 @@ async function loadTableData() {
   }
 
   elements.tableTitle.textContent = state.selectedTable;
-  elements.tableMeta.textContent = "Nacitavam riadky...";
+  elements.tableMeta.textContent = "Načítavam riadky...";
 
   const payload = await fetchJson(`/api/admin/tables/${encodeURIComponent(state.selectedTable)}?limit=${state.limit}&offset=${state.offset}`);
   const { result } = payload;
@@ -232,7 +232,7 @@ async function loadTableData() {
 }
 
 function renderTableError(error) {
-  elements.tableMeta.textContent = "Chyba pri nacitani tabulky";
+  elements.tableMeta.textContent = "Chyba pri načítaní tabuľky";
   elements.schemaContainer.innerHTML = "";
   elements.tableContainer.innerHTML = `<div class="error-box">${escapeHtml(error.message)}</div>`;
 }

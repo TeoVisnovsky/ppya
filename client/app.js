@@ -107,10 +107,10 @@ function getWealthLabel(row) {
   const current = Number(row.wealth_item_count) || 0;
 
   if (!current) {
-    return "0 poloziek";
+    return "0 položiek";
   }
 
-  return `${current} poloziek`;
+  return `${current} položiek`;
 }
 
 function getWealthDeltaLabel(row) {
@@ -118,25 +118,25 @@ function getWealthDeltaLabel(row) {
   const previous = Number(row.previous_wealth_item_count) || 0;
 
   if (!current && !previous) {
-    return "Bez medzirocnej zmeny";
+    return "Bez medziročnej zmeny";
   }
 
   const delta = current - previous;
   if (!delta) {
-    return "Stabilne oproti minulemu roku";
+    return "Stabilné oproti minulému roku";
   }
 
-  return delta > 0 ? `Medzirocne +${delta}` : `Medzirocne ${delta}`;
+  return delta > 0 ? `Medziročne +${delta}` : `Medziročne ${delta}`;
 }
 
 function getSuspicionBadge(row) {
   const level = String(row.risk_level || "none");
   const score = Number(row.risk_factor) || 0;
   const labels = {
-    high: "Vysoke",
-    medium: "Stredne",
-    low: "Nizke",
-    none: "Bez signalu",
+    high: "Vysoké",
+    medium: "Stredné",
+    low: "Nízke",
+    none: "Bez signálu",
   };
 
   return `<span class="risk-pill risk-${escapeHtml(level)}">${escapeHtml(labels[level] || labels.none)} ${escapeHtml(score.toFixed(2))}</span>`;
@@ -218,7 +218,7 @@ function renderRows(rows) {
   if (!rows.length) {
     elements.tableBody.innerHTML = `
       <tr>
-        <td colspan="6"><div class="error-box">Ziadne vysledky pre aktualny filter.</div></td>
+        <td colspan="6"><div class="error-box">Žiadne výsledky pre aktuálny filter.</div></td>
       </tr>
     `;
     return;
@@ -255,7 +255,7 @@ function populatePartyFilter(rows) {
   ).sort((left, right) => left.localeCompare(right, "sk", { sensitivity: "base" }));
 
   elements.partySelect.innerHTML = [
-    '<option value="">Vsetky strany</option>',
+    '<option value="">Všetky strany</option>',
     ...parties.map((party) => `<option value="${escapeHtml(party)}">${escapeHtml(party)}</option>`),
   ].join("");
 }
@@ -266,7 +266,7 @@ function populateYearFilter(rows) {
   ).sort((left, right) => Number(right) - Number(left));
 
   elements.yearSelect.innerHTML = [
-    '<option value="">Vsetky roky</option>',
+    '<option value="">Všetky roky</option>',
     ...years.map((year) => `<option value="${escapeHtml(year)}">${escapeHtml(year)}</option>`),
   ].join("");
 }
@@ -305,7 +305,7 @@ function applyFilters() {
 }
 
 async function loadPoliticians() {
-  elements.resultsInfo.textContent = "Nacitavam data...";
+  elements.resultsInfo.textContent = "Načítavam dáta...";
 
   const response = await fetch("/api/politicians?limit=5000");
   let payload = null;
@@ -317,7 +317,7 @@ async function loadPoliticians() {
   }
 
   if (!response.ok || !payload?.ok) {
-    const message = payload?.error || "Nepodarilo sa nacitat politikov.";
+    const message = payload?.error || "Nepodarilo sa načítať politikov.";
     if (response.status >= 500) {
       throw new Error(`Server error: ${message}`);
     }
@@ -344,10 +344,10 @@ function bindEvents() {
 }
 
 function renderError(error) {
-  elements.resultsInfo.textContent = "Chyba pri nacitani";
+  elements.resultsInfo.textContent = "Chyba pri načítaní";
   elements.tableBody.innerHTML = `
     <tr>
-      <td colspan="6"><div class="error-box">${escapeHtml(error.message || "Nepodarilo sa nacitat data.")}</div></td>
+      <td colspan="6"><div class="error-box">${escapeHtml(error.message || "Nepodarilo sa načítať dáta.")}</div></td>
     </tr>
   `;
 }

@@ -7,9 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/chatbot.css" />
   </head>
   <body class="landing-page chatbot-page">
@@ -39,77 +40,67 @@
     </div>
 
     <div class="page-shell page-shell--landing chatbot-shell">
-      <header class="hero compact-hero chatbot-hero">
-        <div class="hero-copy-block">
-          <p class="eyebrow"><a href="/">Spat na zoznam</a></p>
-          <h1>Database assistant</h1>
-          <p class="hero-copy">
-            Opytaj sa prirodzenym jazykom a chatbot vrati odpoved iba z databazy,
-            plus tabulku vsetkych zhôd, ktoru vies exportovat do CSV.
-          </p>
-        </div>
-        <div class="chatbot-info panel panel-soft">
-          <p class="hero-stat-label">Co vie</p>
-          <p class="hero-stat-value">Natural-language filtrovanie nad celou DB</p>
-          <p class="hero-stat-copy">Majetok, prijmy, zavazky, dary, profily, hlasovania, rok, strana/klub a kombinovane kriterium.</p>
-        </div>
+      <header class="chatbot-topbar">
+        <a class="chatbot-topbar-back" href="/">Späť na dataset</a>
+        <p class="chatbot-topbar-title">Chatbot nad databázou</p>
       </header>
 
-      <main class="chatbot-grid">
+      <main class="chatbot-dashboard">
         <section class="panel chatbot-window chat-window">
           <div class="panel-header panel-header-row">
             <div>
-              <h2>Konverzacia</h2>
-              <p id="statusText">Pripravene na dotaz nad databazou.</p>
+              <h2>Konverzácia</h2>
+              <p id="statusText">Pripravené na databázovú otázku.</p>
             </div>
           </div>
 
-          <div id="suggestionBar" class="suggestion-bar" aria-label="Navrhnute dotazy">
-            <button class="suggestion-chip" type="button" data-prompt="Kto ma najviac majetkovych poloziek?">Najviac majetku</button>
-            <button class="suggestion-chip" type="button" data-prompt="Daj mi vsetkych politikov, co maju motorku v roku 2024.">Motorky 2024</button>
-            <button class="suggestion-chip" type="button" data-prompt="Kto ma sperky?">Sperky</button>
-            <button class="suggestion-chip" type="button" data-prompt="Kto ma najvyssie prijmy?">Najvyssie prijmy</button>
-            <button class="suggestion-chip" type="button" data-prompt="Kto ma zavazky?">Zavazky</button>
+          <div id="suggestionBar" class="suggestion-bar" aria-label="Odporúčané otázky">
+            <button class="suggestion-chip" type="button" data-prompt="Kto má motorku v roku 2024?">Motorky 2024</button>
+            <button class="suggestion-chip" type="button" data-prompt="Ukáž top 5 politikov s najvyšším príjmom.">Najvyšší príjem</button>
+            <button class="suggestion-chip" type="button" data-prompt="Kto má záväzky?">Záväzky</button>
+            <button class="suggestion-chip" type="button" data-prompt="Kto má auto značky VOLVO?">VOLVO auto</button>
+            <button class="suggestion-chip" type="button" data-prompt="Povedz mi viac o Robertovi Ficovi.">Profil politika</button>
           </div>
 
-          <div id="conversation" class="conversation" aria-live="polite"></div>
+          <div id="conversation" class="conversation window-scroll-area" aria-live="polite"></div>
 
           <form id="chatForm" class="composer">
             <label class="composer-field" for="chatInput">
-              <span class="sr-only">Otazka pre databazu</span>
+              <span class="sr-only">Opýtajte sa databázy</span>
               <textarea
                 id="chatInput"
                 name="message"
-                rows="2"
+                rows="1"
                 maxlength="500"
-                placeholder="Napr. Daj mi vsetkych politikov, co maju motorku v roku 2024."
+                placeholder="Napíšte otázku, napríklad: 'Kto má motorku v roku 2024?'"
                 required
               ></textarea>
             </label>
-            <button id="sendButton" class="send-button" type="submit">Odoslat</button>
+            <button id="sendButton" class="send-button" type="submit">Opýtať sa</button>
           </form>
         </section>
 
-        <section class="panel chatbot-window best-window">
+        <aside class="panel chatbot-window results-window">
           <div class="panel-header">
-            <h2>Najlepsi vysledok</h2>
-            <p>Zhrnutie, karty a suvisiace fakty z poslednej odpovede.</p>
+            <h2>Najlepšie výsledky</h2>
+            <p>Najsilnejšia odpoveď a hlavné karty z posledného dopytu.</p>
           </div>
-          <div id="bestSurface" class="best-surface empty-state">
-            Poloz dotaz a tu uvidis zhrnutie odpovede.
+
+          <div id="answerSurface" class="answer-surface empty-state window-scroll-area">
+            Položte otázku a tento panel sa vyplní odpoveďou.
           </div>
-        </section>
+        </aside>
 
         <section class="panel chatbot-window table-window">
           <div class="panel-header panel-header-row">
             <div>
-              <h2>Vsetky zhody</h2>
-              <p>Kompletna tabulka zhodnych zaznamov z databazy pre aktualny dotaz.</p>
+              <h2>Výsledková tabuľka</h2>
+              <p>Plný dataset zodpovedajúci poslednému dopytu.</p>
             </div>
-            <button id="exportButton" class="table-export-button" type="button">Export CSV</button>
           </div>
+
           <div id="tableSurface" class="table-surface empty-state">
-            Tabulka sa zobrazi po prvom uspesnom dotaze.
+            Položte otázku a vygeneruje sa exportovateľná tabuľka.
           </div>
         </section>
       </main>
