@@ -1,0 +1,34 @@
+2026-03-08T02:07:59.030Z start
+2026-03-08T02:07:59.306Z browser_launched
+2026-03-08T02:07:59.508Z action_Detail_attempt_1_start
+2026-03-08T02:08:16.130Z action_Detail_attempt_1_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:08:16.331Z action_Detail_attempt_2_start
+2026-03-08T02:08:32.466Z action_Detail_attempt_2_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:08:32.681Z action_Detail_attempt_3_start
+2026-03-08T02:08:49.054Z action_Detail_attempt_3_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:08:49.239Z action_Detail_attempt_4_start
+2026-03-08T02:09:05.542Z action_Detail_attempt_4_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:09:05.732Z action_Detail_attempt_5_start
+2026-03-08T02:09:22.109Z action_Detail_attempt_5_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:09:22.307Z action_HTML_attempt_1_start
+2026-03-08T02:09:38.499Z action_HTML_attempt_1_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:09:38.703Z action_HTML_attempt_2_start
+2026-03-08T02:09:55.025Z action_HTML_attempt_2_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:09:55.236Z action_HTML_attempt_3_start
+2026-03-08T02:10:11.360Z action_HTML_attempt_3_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:10:11.582Z action_HTML_attempt_4_start
+2026-03-08T02:10:28.060Z action_HTML_attempt_4_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:10:28.255Z action_HTML_attempt_5_start
+2026-03-08T02:10:44.435Z action_HTML_attempt_5_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:10:44.623Z action_PDF_attempt_1_start
+2026-03-08T02:11:00.809Z action_PDF_attempt_1_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:11:00.996Z action_PDF_attempt_2_start
+2026-03-08T02:11:17.413Z action_PDF_attempt_2_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:11:17.602Z action_PDF_attempt_3_start
+2026-03-08T02:11:33.834Z action_PDF_attempt_3_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:11:34.029Z action_PDF_attempt_4_start
+2026-03-08T02:11:50.154Z action_PDF_attempt_4_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:11:50.357Z action_PDF_attempt_5_start
+2026-03-08T02:12:07.623Z action_PDF_attempt_5_error Failed to select cadastral area from autocomplete.
+2026-03-08T02:12:07.651Z output_written
+2026-03-08T02:12:07.654Z closing

@@ -1,0 +1,67 @@
+{
+  "entries": 4164,
+  "nonEmptyEntries": 3500,
+  "uniqueNormalizedNames": 3268,
+  "ambiguousNormalizedNames": 160,
+  "samples": {
+    "Star? Tur?": [],
+    "Ru?inov": [],
+    "Podunajsk? Biskupice": [],
+    "Bystrick? hora": [],
+    "Malacky": [
+      "835196"
+    ]
+  },
+  "blankExamples": [
+    {
+      "page": 2,
+      "icutj": "835196",
+      "name": ""
+    },
+    {
+      "page": 3,
+      "icutj": "838039",
+      "name": ""
+    },
+    {
+      "page": 3,
+      "icutj": "838039",
+      "name": ""
+    },
+    {
+      "page": 3,
+      "icutj": "808814",
+      "name": ""
+    },
+    {
+      "page": 4,
+      "icutj": "854964",
+      "name": ""
+    },
+    {
+      "page": 4,
+      "icutj": "828203",
+      "name": ""
+    },
+    {
+      "page": 4,
+      "icutj": "837628",
+      "name": ""
+    },
+    {
+      "page": 5,
+      "icutj": "863491",
+      "name": ""
+    },
+    {
+      "page": 5,
+      "icutj": "809853",
+      "name": ""
+    },
+    {
+      "page": 6,
+      "icutj": "826782",
+      "name": ""
+    }
+  ]
+}

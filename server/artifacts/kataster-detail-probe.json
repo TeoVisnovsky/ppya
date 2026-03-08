@@ -1,0 +1,21 @@
+{
+  "cadastralArea": "STARÁ TURÁ",
+  "lvNumber": "2482",
+  "results": [
+    {
+      "actionLabel": "Detail",
+      "attempt": 5,
+      "error": "Failed to select cadastral area from autocomplete."
+    },
+    {
+      "actionLabel": "HTML",
+      "attempt": 5,
+      "error": "Failed to select cadastral area from autocomplete."
+    },
+    {
+      "actionLabel": "PDF",
+      "attempt": 5,
+      "error": "Failed to select cadastral area from autocomplete."
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "finalUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv",
+  "title": "Kataster Portal",
+  "notFound": false,
+  "messages": [
+    "Položka \"Obec alebo katastrálne územie\" musí byť vyplnená."
+  ],
+  "bodyPreview": "Portál elektronických služieb katastra nehnuteľností Vyhľadávanie Mapa Prehľady O portáli Pomoc / Kontakt Textová verzia | SK . EN | Prihlásiť sa občianskym preukazom Výpis z listu vlastníctva Aktuality Portálu ESKN: žiadne nové správy. Zobraziť všetky správy. Listy vlastníctva Položka \"Obec alebo katastrálne územie\" musí byť vyplnená. OBEC ALEBO KATASTRÁLNE ÚZEMIE * ČÍSLO LISTU VLASTNÍCTVA ** ČÍSLO PARCELY REGISTRA C ** ČÍSLO PARCELY REGISTRA E ** SÚPISNÉ ČÍSLO ** Vyhľadať Aplikáciu prevádzkuje Úrad geodézie, kartografie a katastra Slovenskej republiky Informačná povinnosť o spracúvaní osobných údajov Mapa stránok Verzia 6.37.06.35k",
+  "tables": [],
+  "links": [
+    {
+      "text": "Portál elektronických služiebkatastra nehnuteľností",
+      "href": "#"
+    },
+    {
+      "text": "Vyhľadávanie",
+      "href": "#"
+    },
+    {
+      "text": "Listy vlastníctva",
+      "href": "#"
+    },
+    {
+      "text": "Parcely, stavby a byty",
+      "href": "#"
+    },
+    {
+      "text": "Vlastníci a iné oprávnené osoby",
+      "href": "#"
+    },
+    {
+      "text": "Mapa",
+      "href": "#"
+    },
+    {
+      "text": "Prehľady",
+      "href": "#"
+    },
+    {
+      "text": "Registre a číselníky",
+      "href": "#"
+    },
+    {
+      "text": "Štatistiky",
+      "href": "#"
+    },
+    {
+      "text": "Aktuálnosť údajov",
+      "href": "#"
+    },
+    {
+      "text": "O portáli",
+      "href": "#"
+    },
+    {
+      "text": "Pomoc / Kontakt",
+      "href": "#"
+    },
+    {
+      "text": "Textová verzia",
+      "href": "#"
+    },
+    {
+      "text": "SK",
+      "href": "#"
+    },
+    {
+      "text": "EN",
+      "href": "#"
+    },
+    {
+      "text": "Prihlásiť sa občianskym preukazom",
+      "href": "#"
+    },
+    {
+      "text": "Zobraziť všetky správy.",
+      "href": "#"
+    },
+    {
+      "text": "Listy vlastníctva",
+      "href": "#"
+    },
+    {
+      "text": "v používateľskej príručke",
+      "href": "#"
+    },
+    {
+      "text": "Úrad geodézie, kartografie a katastra Slovenskej republiky",
+      "href": "http://www.skgeodesy.sk/sk"
+    },
+    {
+      "text": "Informačná povinnosť o spracúvaní osobných údajov",
+      "href": "https://www.skgeodesy.sk/files/sk/slovensky/ugkk/ochrana-osobnych-udajov/informacna-povinnost_iskn.pdf"
+    },
+    {
+      "text": "Mapa stránok",
+      "href": "#"
+    }
+  ],
+  "options": {
+    "cadastralArea": "KARLOVA VES",
+    "lvNumber": "2938",
+    "headless": false,
+    "timeoutMs": 60000,
+    "slowMoMs": 150,
+    "openDetail": false,
+    "openAction": "Detail"
+  },
+  "action": {
+    "clicked": false,
+    "reason": "No visible Detail action found.",
+    "diagnostics": []
+  }
+}

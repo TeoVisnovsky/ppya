@@ -1,0 +1,839 @@
+{
+  "cadastralArea": "STARÁ TURÁ",
+  "lvNumber": "2482",
+  "results": [
+    {
+      "actionLabel": "Detail",
+      "attempt": 1,
+      "ok": true,
+      "result": {
+        "finalUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv/result",
+        "title": "Kataster Portal",
+        "notFound": false,
+        "messages": [],
+        "bodyPreview": "Portál elektronických služieb katastra nehnuteľností Vyhľadávanie Mapa Prehľady O portáli Pomoc / Kontakt Textová verzia | SK . EN | Prihlásiť sa občianskym preukazom Výpis z listu vlastníctva Aktuality Portálu ESKN: žiadne nové správy. Zobraziť všetky správy. Listy vlastníctva obec Stará Turá, okres Nové Mesto nad Váhom 2482 Zmeniť zadanie Našli sme pre Vás 1 výsledok Číslo listu vlastníctva Kód katastrálneho územia Názov katastrálneho územia Názov obce Názov okresu Stav ku dňu 2482 858251 Stará Turá Stará Turá Nové Mesto nad Váhom 06.03.2026 Detail PDF HTML Aplikáciu prevádzkuje Úrad geodézie, kartografie a katastra Slovenskej republiky Informačná povinnosť o spracúvaní osobných údajov Mapa stránok Verzia 6.37.06.35k",
+        "tables": [
+          [
+            [
+              "Číslo listu vlastníctva",
+              "Kód katastrálneho územia",
+              "Názov katastrálneho územia",
+              "Názov obce",
+              "Názov okresu",
+              "Stav ku dňu",
+              "",
+              "",
+              ""
+            ],
+            [
+              "2482",
+              "858251",
+              "Stará Turá",
+              "Stará Turá",
+              "Nové Mesto nad Váhom",
+              "06.03.2026",
+              "Detail",
+              "PDF",
+              "HTML"
+            ]
+          ]
+        ],
+        "links": [
+          {
+            "text": "Portál elektronických služiebkatastra nehnuteľností",
+            "href": "#"
+          },
+          {
+            "text": "Vyhľadávanie",
+            "href": "#"
+          },
+          {
+            "text": "Listy vlastníctva",
+            "href": "#"
+          },
+          {
+            "text": "Parcely, stavby a byty",
+            "href": "#"
+          },
+          {
+            "text": "Vlastníci a iné oprávnené osoby",
+            "href": "#"
+          },
+          {
+            "text": "Mapa",
+            "href": "#"
+          },
+          {
+            "text": "Prehľady",
+            "href": "#"
+          },
+          {
+            "text": "Registre a číselníky",
+            "href": "#"
+          },
+          {
+            "text": "Štatistiky",
+            "href": "#"
+          },
+          {
+            "text": "Aktuálnosť údajov",
+            "href": "#"
+          },
+          {
+            "text": "O portáli",
+            "href": "#"
+          },
+          {
+            "text": "Pomoc / Kontakt",
+            "href": "#"
+          },
+          {
+            "text": "Textová verzia",
+            "href": "#"
+          },
+          {
+            "text": "SK",
+            "href": "#"
+          },
+          {
+            "text": "EN",
+            "href": "#"
+          },
+          {
+            "text": "Prihlásiť sa občianskym preukazom",
+            "href": "#"
+          },
+          {
+            "text": "Zobraziť všetky správy.",
+            "href": "#"
+          },
+          {
+            "text": "Listy vlastníctva",
+            "href": "#"
+          },
+          {
+            "text": "PDF",
+            "href": "#"
+          },
+          {
+            "text": "HTML",
+            "href": "#"
+          },
+          {
+            "text": "v používateľskej príručke",
+            "href": "#"
+          },
+          {
+            "text": "Úrad geodézie, kartografie a katastra Slovenskej republiky",
+            "href": "http://www.skgeodesy.sk/sk"
+          },
+          {
+            "text": "Informačná povinnosť o spracúvaní osobných údajov",
+            "href": "https://www.skgeodesy.sk/files/sk/slovensky/ugkk/ochrana-osobnych-udajov/informacna-povinnost_iskn.pdf"
+          },
+          {
+            "text": "Mapa stránok",
+            "href": "#"
+          }
+        ],
+        "options": {
+          "cadastralArea": "STARÁ TURÁ",
+          "lvNumber": "2482",
+          "headless": false,
+          "timeoutMs": 45000,
+          "slowMoMs": 250,
+          "openDetail": false,
+          "openAction": "Detail"
+        },
+        "action": {
+          "clicked": true,
+          "mechanism": "navigation",
+          "beforeUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv/result",
+          "finalUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv/nahlad?p1=qNlphlJVq_dn9-qZBomk-w",
+          "title": "Kataster Portal",
+          "notFound": false,
+          "messages": [],
+          "bodyPreview": "Portál elektronických služieb katastra nehnuteľností Vyhľadávanie Mapa Prehľady O portáli Pomoc / Kontakt Textová verzia | SK . EN | Prihlásiť sa občianskym preukazom Výpis z listu vlastníctva Aktuality Portálu ESKN: žiadne nové správy. Zobraziť všetky správy. Listy vlastníctva Úplný LV: PDF HTML Okres Nové Mesto nad Váhom Obec Stará Turá Katastrálne územie Stará Turá Údaje platné k 6.3.2026 18:00:00 NÁHĽAD LISTU VLASTNÍCTVA Č. 2482 ČASŤ A: MAJETKOVÁ PODSTATA Parcely registra \"C\" evidované na katastrálnej mape Počet parciel: 7 Parcelné číslo Výmera v m2 Druh pozemku Spôsob využívania pozemku Druh chránenej nehnuteľnosti Umiestnenie pozemku Druh právneho vzťahu 954/2 146 m2 Trvalý trávny porast 7 1 954/3 390 m2 Zastavaná plocha a nádvorie 15 1 954/7 270 m2 Trvalý trávny porast 7 1 954/9 244 m2 Ostatná plocha 37 1 958/17 19 m2 Zastavaná plocha a nádvorie 15 1 958/25 6 m2 Zastavaná plocha a nádvorie 18 1 958/32 3 m2 Zastavaná plocha a nádvorie 18 1 Stavby Počet stavieb: 2 Súpisné číslo Na pozemku parcelné číslo Druh stavby Popis stavby Druh chránenej nehnuteľnosti Umiestnenie stavby 764 954/3 10 DOM 1 6469 958/17 7 Garáž 1 ČASŤ B: VLASTNÍCI A INÉ OPRÁVNENÉ OSOBY Z PRÁVA K NEHNUTEĽNOSTI Vlastníci Počet vlastníkov: 1 Por. č. 1. Titul, priezvisko, meno, rodné meno, Miesto trvalého pobytu, Dátum narodenia BSMPharm.Dr. Barszcz Leopold, 03.10.1960, ul. 8.apríla 764/35, Stará Turá, 916 01 Mgr. Barszczová Gabriela r.Kubrická, 23.05.1967, ul. 8.apríla 764/35, Stará Turá, 916 01 Spoluvlast. podiel 1/1 Titul nadobudnutia Osvedčenie o vydržaní zák. č.323/92 Zb - N 166/2005 zo dňa 21.12.2005 - Z 3241/05 - VZ 19/06 KÚP.ZMLUVA V 1430/97 - VZ 643/97 LISTINA O URČ.SČ. Č.2236/99 - Vz.372/00 Kúpna zmluva V 1989/09 z 23.11.2009 - VZ 839/09 Kúpna zmluva V 107/2006 z 16.2. 2006 -VZ 125/06 Kúpna zmluva V 530/96 - VZ. 211/96 ČASŤ C: ŤARCHY Poradové č. vlastníka 1 VKLAD ZÁL.PRÁVA V PROSPECH ŠTÁTNY FOND ROZVOJA BÝVANIA BRATISLAVA - DOM SČ.764, P.Č.954/3 - V 252/2001 Aplikáciu prevádzkuje Úrad geodézie, kartografie a katastra Slovenskej republiky Informačná povinnosť o spracúvaní osobných údajov Mapa stránok Verzia 6.37.06.35k",
+          "tables": [
+            [
+              [
+                "Parcelné číslo",
+                "Výmera v m2",
+                "Druh pozemku",
+                "Spôsob využívania pozemku",
+                "Druh chránenej nehnuteľnosti",
+                "Umiestnenie pozemku",
+                "Druh právneho vzťahu"
+              ],
+              [
+                "954/2",
+                "146 m2",
+                "Trvalý trávny porast",
+                "7",
+                "",
+                "1",
+                ""
+              ],
+              [
+                "954/3",
+                "390 m2",
+                "Zastavaná plocha a nádvorie",
+                "15",
+                "",
+                "1",
+                ""
+              ],
+              [
+                "954/7",
+                "270 m2",
+                "Trvalý trávny porast",
+                "7",
+                "",
+                "1",
+                ""
+              ],
+              [
+                "954/9",
+                "244 m2",
+                "Ostatná plocha",
+                "37",
+                "",
+                "1",
+                ""
+              ],
+              [
+                "958/17",
+                "19 m2",
+                "Zastavaná plocha a nádvorie",
+                "15",
+                "",
+                "1",
+                ""
+              ],
+              [
+                "958/25",
+                "6 m2",
+                "Zastavaná plocha a nádvorie",
+                "18",
+                "",
+                "1",
+                ""
+              ],
+              [
+                "958/32",
+                "3 m2",
+                "Zastavaná plocha a nádvorie",
+                "18",
+                "",
+                "1",
+                ""
+              ]
+            ],
+            [
+              [
+                "Súpisné číslo",
+                "Na pozemku parcelné číslo",
+                "Druh stavby",
+                "Popis stavby",
+                "Druh chránenej nehnuteľnosti",
+                "Umiestnenie stavby"
+              ],
+              [
+                "764",
+                "954/3",
+                "10",
+                "DOM",
+                "",
+                "1"
+              ],
+              [
+                "6469",
+                "958/17",
+                "7",
+                "Garáž",
+                "",
+                "1"
+              ]
+            ],
+            [
+              [
+                "",
+                "Por. č. 1.",
+                "Titul, priezvisko, meno, rodné meno, Miesto trvalého pobytu, Dátum narodenia BSM Pharm.Dr. Barszcz Leopold, 03.10.1960, ul. 8.apríla 764/35, Stará Turá, 916 01 Mgr. Barszczová Gabriela r.Kubrická, 23.05.1967, ul. 8.apríla 764/35, Stará Turá, 916 01",
+                "Spoluvlast. podiel 1/1"
+              ],
+              [
+                "",
+                "Titul nadobudnutia Osvedčenie o vydržaní zák. č.323/92 Zb - N 166/2005 zo dňa 21.12.2005 - Z 3241/05 - VZ 19/06 KÚP.ZMLUVA V 1430/97 - VZ 643/97 LISTINA O URČ.SČ. Č.2236/99 - Vz.372/00 Kúpna zmluva V 1989/09 z 23.11.2009 - VZ 839/09 Kúpna zmluva V 107/2006 z 16.2. 2006 -VZ 125/06 Kúpna zmluva V 530/96 - VZ. 211/96"
+              ]
+            ],
+            [
+              [
+                "Poradové č. vlastníka 1",
+                "VKLAD ZÁL.PRÁVA V PROSPECH ŠTÁTNY FOND ROZVOJA BÝVANIA BRATISLAVA - DOM SČ.764, P.Č.954/3 - V 252/2001"
+              ]
+            ]
+          ],
+          "links": [
+            {
+              "text": "Portál elektronických služiebkatastra nehnuteľností",
+              "href": "#"
+            },
+            {
+              "text": "Vyhľadávanie",
+              "href": "#"
+            },
+            {
+              "text": "Listy vlastníctva",
+              "href": "#"
+            },
+            {
+              "text": "Parcely, stavby a byty",
+              "href": "#"
+            },
+            {
+              "text": "Vlastníci a iné oprávnené osoby",
+              "href": "#"
+            },
+            {
+              "text": "Mapa",
+              "href": "#"
+            },
+            {
+              "text": "Prehľady",
+              "href": "#"
+            },
+            {
+              "text": "Registre a číselníky",
+              "href": "#"
+            },
+            {
+              "text": "Štatistiky",
+              "href": "#"
+            },
+            {
+              "text": "Aktuálnosť údajov",
+              "href": "#"
+            },
+            {
+              "text": "O portáli",
+              "href": "#"
+            },
+            {
+              "text": "Pomoc / Kontakt",
+              "href": "#"
+            },
+            {
+              "text": "Textová verzia",
+              "href": "#"
+            },
+            {
+              "text": "SK",
+              "href": "#"
+            },
+            {
+              "text": "EN",
+              "href": "#"
+            },
+            {
+              "text": "Prihlásiť sa občianskym preukazom",
+              "href": "#"
+            },
+            {
+              "text": "Zobraziť všetky správy.",
+              "href": "#"
+            },
+            {
+              "text": "Listy vlastníctva",
+              "href": "#"
+            },
+            {
+              "text": "PDF",
+              "href": "#"
+            },
+            {
+              "text": "HTML",
+              "href": "#"
+            },
+            {
+              "text": "954/2",
+              "href": "#"
+            },
+            {
+              "text": "954/3",
+              "href": "#"
+            },
+            {
+              "text": "954/7",
+              "href": "#"
+            },
+            {
+              "text": "954/9",
+              "href": "#"
+            },
+            {
+              "text": "958/17",
+              "href": "#"
+            },
+            {
+              "text": "958/25",
+              "href": "#"
+            },
+            {
+              "text": "958/32",
+              "href": "#"
+            },
+            {
+              "text": "764",
+              "href": "#"
+            },
+            {
+              "text": "954/3",
+              "href": "#"
+            },
+            {
+              "text": "6469",
+              "href": "#"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "actionLabel": "HTML",
+      "attempt": 1,
+      "ok": true,
+      "result": {
+        "finalUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv/result",
+        "title": "Kataster Portal",
+        "notFound": false,
+        "messages": [],
+        "bodyPreview": "Portál elektronických služieb katastra nehnuteľností Vyhľadávanie Mapa Prehľady O portáli Pomoc / Kontakt Textová verzia | SK . EN | Prihlásiť sa občianskym preukazom Výpis z listu vlastníctva Aktuality Portálu ESKN: žiadne nové správy. Zobraziť všetky správy. Listy vlastníctva obec Stará Turá, okres Nové Mesto nad Váhom 2482 Zmeniť zadanie Našli sme pre Vás 1 výsledok Číslo listu vlastníctva Kód katastrálneho územia Názov katastrálneho územia Názov obce Názov okresu Stav ku dňu 2482 858251 Stará Turá Stará Turá Nové Mesto nad Váhom 06.03.2026 Detail PDF HTML Aplikáciu prevádzkuje Úrad geodézie, kartografie a katastra Slovenskej republiky Informačná povinnosť o spracúvaní osobných údajov Mapa stránok Verzia 6.37.06.35k",
+        "tables": [
+          [
+            [
+              "Číslo listu vlastníctva",
+              "Kód katastrálneho územia",
+              "Názov katastrálneho územia",
+              "Názov obce",
+              "Názov okresu",
+              "Stav ku dňu",
+              "",
+              "",
+              ""
+            ],
+            [
+              "2482",
+              "858251",
+              "Stará Turá",
+              "Stará Turá",
+              "Nové Mesto nad Váhom",
+              "06.03.2026",
+              "Detail",
+              "PDF",
+              "HTML"
+            ]
+          ]
+        ],
+        "links": [
+          {
+            "text": "Portál elektronických služiebkatastra nehnuteľností",
+            "href": "#"
+          },
+          {
+            "text": "Vyhľadávanie",
+            "href": "#"
+          },
+          {
+            "text": "Listy vlastníctva",
+            "href": "#"
+          },
+          {
+            "text": "Parcely, stavby a byty",
+            "href": "#"
+          },
+          {
+            "text": "Vlastníci a iné oprávnené osoby",
+            "href": "#"
+          },
+          {
+            "text": "Mapa",
+            "href": "#"
+          },
+          {
+            "text": "Prehľady",
+            "href": "#"
+          },
+          {
+            "text": "Registre a číselníky",
+            "href": "#"
+          },
+          {
+            "text": "Štatistiky",
+            "href": "#"
+          },
+          {
+            "text": "Aktuálnosť údajov",
+            "href": "#"
+          },
+          {
+            "text": "O portáli",
+            "href": "#"
+          },
+          {
+            "text": "Pomoc / Kontakt",
+            "href": "#"
+          },
+          {
+            "text": "Textová verzia",
+            "href": "#"
+          },
+          {
+            "text": "SK",
+            "href": "#"
+          },
+          {
+            "text": "EN",
+            "href": "#"
+          },
+          {
+            "text": "Prihlásiť sa občianskym preukazom",
+            "href": "#"
+          },
+          {
+            "text": "Zobraziť všetky správy.",
+            "href": "#"
+          },
+          {
+            "text": "Listy vlastníctva",
+            "href": "#"
+          },
+          {
+            "text": "PDF",
+            "href": "#"
+          },
+          {
+            "text": "HTML",
+            "href": "#"
+          },
+          {
+            "text": "v používateľskej príručke",
+            "href": "#"
+          },
+          {
+            "text": "Úrad geodézie, kartografie a katastra Slovenskej republiky",
+            "href": "http://www.skgeodesy.sk/sk"
+          },
+          {
+            "text": "Informačná povinnosť o spracúvaní osobných údajov",
+            "href": "https://www.skgeodesy.sk/files/sk/slovensky/ugkk/ochrana-osobnych-udajov/informacna-povinnost_iskn.pdf"
+          },
+          {
+            "text": "Mapa stránok",
+            "href": "#"
+          }
+        ],
+        "options": {
+          "cadastralArea": "STARÁ TURÁ",
+          "lvNumber": "2482",
+          "headless": false,
+          "timeoutMs": 45000,
+          "slowMoMs": 250,
+          "openDetail": false,
+          "openAction": "HTML"
+        },
+        "action": {
+          "clicked": true,
+          "mechanism": "popup",
+          "beforeUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv/result",
+          "finalUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv/result",
+          "title": "Kataster Portal",
+          "notFound": false,
+          "messages": [],
+          "bodyPreview": "Portál elektronických služieb katastra nehnuteľností Vyhľadávanie Mapa Prehľady O portáli Pomoc / Kontakt Textová verzia | SK . EN | Prihlásiť sa občianskym preukazom Výpis z listu vlastníctva Aktuality Portálu ESKN: žiadne nové správy. Zobraziť všetky správy. Listy vlastníctva obec Stará Turá, okres Nové Mesto nad Váhom 2482 Zmeniť zadanie Našli sme pre Vás 1 výsledok Číslo listu vlastníctva Kód katastrálneho územia Názov katastrálneho územia Názov obce Názov okresu Stav ku dňu 2482 858251 Stará Turá Stará Turá Nové Mesto nad Váhom 06.03.2026 Detail PDF HTML Aplikáciu prevádzkuje Úrad geodézie, kartografie a katastra Slovenskej republiky Informačná povinnosť o spracúvaní osobných údajov Mapa stránok Verzia 6.37.06.35k",
+          "tables": [
+            [
+              [
+                "Číslo listu vlastníctva",
+                "Kód katastrálneho územia",
+                "Názov katastrálneho územia",
+                "Názov obce",
+                "Názov okresu",
+                "Stav ku dňu",
+                "",
+                "",
+                ""
+              ],
+              [
+                "2482",
+                "858251",
+                "Stará Turá",
+                "Stará Turá",
+                "Nové Mesto nad Váhom",
+                "06.03.2026",
+                "Detail",
+                "PDF",
+                "HTML"
+              ]
+            ]
+          ],
+          "links": [
+            {
+              "text": "Portál elektronických služiebkatastra nehnuteľností",
+              "href": "#"
+            },
+            {
+              "text": "Vyhľadávanie",
+              "href": "#"
+            },
+            {
+              "text": "Listy vlastníctva",
+              "href": "#"
+            },
+            {
+              "text": "Parcely, stavby a byty",
+              "href": "#"
+            },
+            {
+              "text": "Vlastníci a iné oprávnené osoby",
+              "href": "#"
+            },
+            {
+              "text": "Mapa",
+              "href": "#"
+            },
+            {
+              "text": "Prehľady",
+              "href": "#"
+            },
+            {
+              "text": "Registre a číselníky",
+              "href": "#"
+            },
+            {
+              "text": "Štatistiky",
+              "href": "#"
+            },
+            {
+              "text": "Aktuálnosť údajov",
+              "href": "#"
+            },
+            {
+              "text": "O portáli",
+              "href": "#"
+            },
+            {
+              "text": "Pomoc / Kontakt",
+              "href": "#"
+            },
+            {
+              "text": "Textová verzia",
+              "href": "#"
+            },
+            {
+              "text": "SK",
+              "href": "#"
+            },
+            {
+              "text": "EN",
+              "href": "#"
+            },
+            {
+              "text": "Prihlásiť sa občianskym preukazom",
+              "href": "#"
+            },
+            {
+              "text": "Zobraziť všetky správy.",
+              "href": "#"
+            },
+            {
+              "text": "Listy vlastníctva",
+              "href": "#"
+            },
+            {
+              "text": "PDF",
+              "href": "#"
+            },
+            {
+              "text": "HTML",
+              "href": "#"
+            },
+            {
+              "text": "v používateľskej príručke",
+              "href": "#"
+            },
+            {
+              "text": "Úrad geodézie, kartografie a katastra Slovenskej republiky",
+              "href": "http://www.skgeodesy.sk/sk"
+            },
+            {
+              "text": "Informačná povinnosť o spracúvaní osobných údajov",
+              "href": "https://www.skgeodesy.sk/files/sk/slovensky/ugkk/ochrana-osobnych-udajov/informacna-povinnost_iskn.pdf"
+            },
+            {
+              "text": "Mapa stránok",
+              "href": "#"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "actionLabel": "PDF",
+      "attempt": 1,
+      "ok": true,
+      "result": {
+        "finalUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv/result",
+        "title": "Kataster Portal",
+        "notFound": false,
+        "messages": [],
+        "bodyPreview": "Portál elektronických služieb katastra nehnuteľností Vyhľadávanie Mapa Prehľady O portáli Pomoc / Kontakt Textová verzia | SK . EN | Prihlásiť sa občianskym preukazom Výpis z listu vlastníctva Aktuality Portálu ESKN: žiadne nové správy. Zobraziť všetky správy. Listy vlastníctva obec Stará Turá, okres Nové Mesto nad Váhom 2482 Zmeniť zadanie Našli sme pre Vás 1 výsledok Číslo listu vlastníctva Kód katastrálneho územia Názov katastrálneho územia Názov obce Názov okresu Stav ku dňu 2482 858251 Stará Turá Stará Turá Nové Mesto nad Váhom 06.03.2026 Detail PDF HTML Aplikáciu prevádzkuje Úrad geodézie, kartografie a katastra Slovenskej republiky Informačná povinnosť o spracúvaní osobných údajov Mapa stránok Verzia 6.37.06.35k",
+        "tables": [
+          [
+            [
+              "Číslo listu vlastníctva",
+              "Kód katastrálneho územia",
+              "Názov katastrálneho územia",
+              "Názov obce",
+              "Názov okresu",
+              "Stav ku dňu",
+              "",
+              "",
+              ""
+            ],
+            [
+              "2482",
+              "858251",
+              "Stará Turá",
+              "Stará Turá",
+              "Nové Mesto nad Váhom",
+              "06.03.2026",
+              "Detail",
+              "PDF",
+              "HTML"
+            ]
+          ]
+        ],
+        "links": [
+          {
+            "text": "Portál elektronických služiebkatastra nehnuteľností",
+            "href": "#"
+          },
+          {
+            "text": "Vyhľadávanie",
+            "href": "#"
+          },
+          {
+            "text": "Listy vlastníctva",
+            "href": "#"
+          },
+          {
+            "text": "Parcely, stavby a byty",
+            "href": "#"
+          },
+          {
+            "text": "Vlastníci a iné oprávnené osoby",
+            "href": "#"
+          },
+          {
+            "text": "Mapa",
+            "href": "#"
+          },
+          {
+            "text": "Prehľady",
+            "href": "#"
+          },
+          {
+            "text": "Registre a číselníky",
+            "href": "#"
+          },
+          {
+            "text": "Štatistiky",
+            "href": "#"
+          },
+          {
+            "text": "Aktuálnosť údajov",
+            "href": "#"
+          },
+          {
+            "text": "O portáli",
+            "href": "#"
+          },
+          {
+            "text": "Pomoc / Kontakt",
+            "href": "#"
+          },
+          {
+            "text": "Textová verzia",
+            "href": "#"
+          },
+          {
+            "text": "SK",
+            "href": "#"
+          },
+          {
+            "text": "EN",
+            "href": "#"
+          },
+          {
+            "text": "Prihlásiť sa občianskym preukazom",
+            "href": "#"
+          },
+          {
+            "text": "Zobraziť všetky správy.",
+            "href": "#"
+          },
+          {
+            "text": "Listy vlastníctva",
+            "href": "#"
+          },
+          {
+            "text": "PDF",
+            "href": "#"
+          },
+          {
+            "text": "HTML",
+            "href": "#"
+          },
+          {
+            "text": "v používateľskej príručke",
+            "href": "#"
+          },
+          {
+            "text": "Úrad geodézie, kartografie a katastra Slovenskej republiky",
+            "href": "http://www.skgeodesy.sk/sk"
+          },
+          {
+            "text": "Informačná povinnosť o spracúvaní osobných údajov",
+            "href": "https://www.skgeodesy.sk/files/sk/slovensky/ugkk/ochrana-osobnych-udajov/informacna-povinnost_iskn.pdf"
+          },
+          {
+            "text": "Mapa stránok",
+            "href": "#"
+          }
+        ],
+        "options": {
+          "cadastralArea": "STARÁ TURÁ",
+          "lvNumber": "2482",
+          "headless": false,
+          "timeoutMs": 45000,
+          "slowMoMs": 250,
+          "openDetail": false,
+          "openAction": "PDF"
+        },
+        "action": {
+          "clicked": true,
+          "mechanism": "popup",
+          "beforeUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv/result",
+          "finalUrl": "https://kataster.skgeodesy.sk/Portal45/api/Bo/GeneratePrfPublic?prfNumber=2482&cadastralUnitCode=858251&outputType=pdf",
+          "title": "ESKN BO",
+          "notFound": false,
+          "messages": [],
+          "bodyPreview": "",
+          "tables": [],
+          "links": []
+        }
+      }
+    }
+  ]
+}

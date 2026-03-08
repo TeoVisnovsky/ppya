@@ -1,0 +1,9 @@
+{
+  "totalRows": 8670,
+  "okRows": 8544,
+  "noRealEstateRows": 101,
+  "missingLvRows": 17,
+  "missingCadastralAreaRows": 0,
+  "missingBothRows": 8,
+  "flattenedRowCount": 9081
+}

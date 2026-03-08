@@ -1,0 +1,221 @@
+{
+  "sourcePdf": "ku_sr_9_2020.pdf",
+  "recordCount": 3341,
+  "ambiguousRecordCount": 128,
+  "blankExtractedRows": 664,
+  "sample": [
+    {
+      "normalizedName": "abelova",
+      "displayNames": [
+        "Ábelová"
+      ],
+      "icutjValues": [
+        "800015"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "abovce",
+      "displayNames": [
+        "Abovce"
+      ],
+      "icutjValues": [
+        "800040"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "abraham",
+      "displayNames": [
+        "Abrahám"
+      ],
+      "icutjValues": [
+        "800058"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "abrahamovce",
+      "displayNames": [
+        "Abrahámovce"
+      ],
+      "icutjValues": [
+        "800066",
+        "800074"
+      ],
+      "isAmbiguous": true
+    },
+    {
+      "normalizedName": "abramova",
+      "displayNames": [
+        "Abramová"
+      ],
+      "icutjValues": [
+        "800091"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "abranovce",
+      "displayNames": [
+        "Abranovce"
+      ],
+      "icutjValues": [
+        "800112"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "adamovske kochanovce",
+      "displayNames": [
+        "Adamovské Kochanovce"
+      ],
+      "icutjValues": [
+        "800121"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "adidovce",
+      "displayNames": [
+        "Adidovce"
+      ],
+      "icutjValues": [
+        "800155"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "aleksince",
+      "displayNames": [
+        "Alekšince"
+      ],
+      "icutjValues": [
+        "800163"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "amadeho kracany",
+      "displayNames": [
+        "Amadeho Kračany"
+      ],
+      "icutjValues": [
+        "826740"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "andac",
+      "displayNames": [
+        "Andač"
+      ],
+      "icutjValues": [
+        "800180"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "andovce",
+      "displayNames": [
+        "Andovce"
+      ],
+      "icutjValues": [
+        "800198"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "andrejova",
+      "displayNames": [
+        "Andrejová"
+      ],
+      "icutjValues": [
+        "800201"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "ardanovce",
+      "displayNames": [
+        "Ardanovce"
+      ],
+      "icutjValues": [
+        "800236"
+      ],
+      "isAmbiguous": false
+    },
+    {
+      "normalizedName": "ardovo",
+      "displayNames": [
+        "Ardovo"
+      ],
+      "icutjValues": [
+        "800252"
+      ],
+      "isAmbiguous": false
+    }
+  ],
+  "blankExamples": [
+    {
+      "page": 2,
+      "icutj": "835196",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 3,
+      "icutj": "838039",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 3,
+      "icutj": "838039",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 3,
+      "icutj": "808814",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 4,
+      "icutj": "854964",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 4,
+      "icutj": "828203",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 4,
+      "icutj": "837628",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 5,
+      "icutj": "863491",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 5,
+      "icutj": "809853",
+      "name": "",
+      "normalizedName": ""
+    },
+    {
+      "page": 6,
+      "icutj": "826782",
+      "name": "",
+      "normalizedName": ""
+    }
+  ]
+}
