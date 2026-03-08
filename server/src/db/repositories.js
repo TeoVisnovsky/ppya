@@ -1136,7 +1136,7 @@ async function fetchItemTable(client, tableName, declarationId) {
   return result.rows.map((row) => row.item_text);
 }
 
-async function fetchRealEstateCategory(client, declarationId) {
+async function fetchRealEstateCategory(client, declarationId, politicianFullName = null) {
   const result = await client.query(
     `
       SELECT id, item_text
@@ -1149,7 +1149,9 @@ async function fetchRealEstateCategory(client, declarationId) {
 
   const records = [];
   for (const row of result.rows) {
-    const katasterLinks = await buildRealEstateKatasterLinkRows(row.item_text);
+    const katasterLinks = await buildRealEstateKatasterLinkRows(row.item_text, {
+      politicianFullName,
+    });
     records.push({
       id: row.id,
       item_text: row.item_text,
@@ -1301,7 +1303,7 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
     const categories = {};
     for (const [key, tableName] of Object.entries(CATEGORY_TABLES)) {
       if (key === "realEstate") {
-        const realEstateCategory = await fetchRealEstateCategory(client, declaration.id);
+        const realEstateCategory = await fetchRealEstateCategory(client, declaration.id, politician.full_name || null);
         categories[key] = {
           label: CATEGORY_LABELS[key],
           items: realEstateCategory.items,
