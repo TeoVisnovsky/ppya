@@ -335,6 +335,17 @@ tbody tr:hover {
   padding: 10px 12px;
 }
 
+.lv-link-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lv-link {
+  min-width: 58px;
+  padding: 8px 12px;
+}
+
 .declaration-switcher {
   min-width: 220px;
 }

@@ -84,11 +84,19 @@ function parseMovableAssetItem(item) {
   return parseStructuredItem(item, ",", "Vec");
 }
 
-function getStructuredCategoryRows(categoryKey, items) {
-  if (categoryKey === "realEstate") {
-    return items.map(parseRealEstateItem);
+function buildRealEstateRows(category) {
+  const records = Array.isArray(category?.records) ? category.records : [];
+  if (!records.length) {
+    return [];
   }
 
+  return records.map((record) => ({
+    ...parseRealEstateItem(record.item_text),
+    __katasterLinks: Array.isArray(record.kataster_links) ? record.kataster_links : [],
+  }));
+}
+
+function getStructuredCategoryRows(categoryKey, items) {
   if (categoryKey === "movableAssets") {
     return items.map(parseMovableAssetItem);
   }
@@ -96,8 +104,74 @@ function getStructuredCategoryRows(categoryKey, items) {
   return null;
 }
 
-function renderStructuredCategoryTable(categoryKey, items) {
-  const rows = getStructuredCategoryRows(categoryKey, items);
+function renderLvButtons(katasterLinks) {
+  const usableLinks = katasterLinks.filter((link) => link?.publicPdfUrl);
+  if (!usableLinks.length) {
+    return '<span class="muted-inline">LV nedostupne</span>';
+  }
+
+  return `
+    <div class="lv-link-group">
+      ${usableLinks.map((link, index) => `
+        <a class="table-link lv-link" href="${escapeHtml(link.publicPdfUrl)}" target="_blank" rel="noreferrer">
+          ${escapeHtml(usableLinks.length > 1 ? `LV ${index + 1}` : "LV")}
+        </a>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderRealEstateCategoryTable(category) {
+  const rows = buildRealEstateRows(category);
+  if (!rows.length) {
+    return null;
+  }
+
+  const columns = [];
+  for (const row of rows) {
+    for (const key of Object.keys(row)) {
+      if (key === "__katasterLinks") {
+        continue;
+      }
+
+      if (!columns.includes(key)) {
+        columns.push(key);
+      }
+    }
+  }
+  columns.push("LV");
+
+  const header = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
+  const body = rows
+    .map((row) => {
+      const cells = columns.map((column) => {
+        if (column === "LV") {
+          return `<td>${renderLvButtons(row.__katasterLinks || [])}</td>`;
+        }
+
+        return `<td>${escapeHtml(row[column] || "-")}</td>`;
+      }).join("");
+
+      return `<tr>${cells}</tr>`;
+    })
+    .join("");
+
+  return `
+    <div class="detail-table-wrap">
+      <table class="detail-category-table">
+        <thead><tr>${header}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderStructuredCategoryTable(categoryKey, category) {
+  if (categoryKey === "realEstate") {
+    return renderRealEstateCategoryTable(category);
+  }
+
+  const rows = getStructuredCategoryRows(categoryKey, category.items);
   if (!rows || !rows.length) {
     return null;
   }
@@ -139,7 +213,7 @@ function renderCategoryCard(categoryKey, category) {
     `;
   }
 
-  const structuredTable = renderStructuredCategoryTable(categoryKey, category.items);
+  const structuredTable = renderStructuredCategoryTable(categoryKey, category);
   if (structuredTable) {
     return `
       <article class="category-card category-card-structured">
@@ -337,6 +411,7 @@ function renderCategories(activeDeclaration) {
   const realEstateCategory = categories.realEstate || {
     label: "Vlastnictvo nehnutelnej veci",
     items: [],
+    records: [],
   };
   const movableAssetsCategory = categories.movableAssets || {
     label: "Vlastnictvo hnutelnej veci",

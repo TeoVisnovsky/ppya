@@ -40,8 +40,37 @@ function getErrorStatus(error) {
   return 500;
 }
 
+function resolveSafeKatasterRedirectTarget(rawUrl) {
+  if (!rawUrl) {
+    return null;
+  }
+
+  try {
+    const target = new URL(String(rawUrl));
+    const isAllowedHost = target.protocol === "https:" && target.hostname === "kataster.skgeodesy.sk";
+    const isAllowedPath = target.pathname === "/Portal45/api/Bo/GeneratePrfPublic";
+
+    if (!isAllowedHost || !isAllowedPath) {
+      return null;
+    }
+
+    return target.toString();
+  } catch {
+    return null;
+  }
+}
+
 app.get("/api/health", (_, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/kataster/open", (req, res) => {
+  const target = resolveSafeKatasterRedirectTarget(req.query.target);
+  if (!target) {
+    return res.status(400).json({ ok: false, error: "Invalid kataster target url" });
+  }
+
+  return res.redirect(target);
 });
 
 app.post("/api/migrate", async (_, res) => {
