@@ -7,15 +7,19 @@
     "start": "node src/index.js",
     "migrate": "node src/db/migrate.js",
     "migrate:all": "node src/db/migrateAll.js",
+    "link:real-estate": "node src/db/linkRealEstateKataster.js",
+    "estimate:movable-assets": "node src/analysis/backfillMovableAssetEstimations.js",
     "scrape": "node src/scraper/nrsrScraper.js",
     "scrape:profiles": "node src/scraper/nrsrDeputyProfileSync.js",
-    "scrape:voting": "node src/scraper/nrsrVotingScraper.js"
+    "scrape:voting": "node src/scraper/nrsrVotingScraper.js",
+    "scrape:social": "node src/scraper/webSocialMediaSync.js"
   },
   "dependencies": {
     "axios": "^1.8.4",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "pg": "^8.13.3"
+    "pg": "^8.13.3",
+    "playwright": "^1.40.0"
   }
 }

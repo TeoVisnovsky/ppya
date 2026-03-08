@@ -1,0 +1,7 @@
+{
+  "createdAt": "2026-03-08T10:36:12.309Z",
+  "cadastralArea": "POPRAD",
+  "lvNumber": "4330",
+  "finalUrl": "https://kataster.skgeodesy.sk/eskn-portal/search/lv",
+  "errorMessage": "locator.evaluate: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('#div_ku input.ui-autocomplete-input').first()\u001b[22m\n\u001b[2m    - locator resolved to visible <input value=\"\" type=\"text\" maxlength=\"70\" role=\"textbox\" autocomplete=\"off\" id=\"j_idt118_input\" name=\"j_idt118_input\" aria-disabled=\"false\" aria-readonly=\"false\" aria-autocomplete=\"list\" class=\"ui-autocomplete-input ui-inputfield ui-widget ui-state-default ui-corner-all\"/>\u001b[22m\n"
+}

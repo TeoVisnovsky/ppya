@@ -5,6 +5,8 @@ import {
   buildRiskAnalysisFromListRow,
   buildTimelineEntry,
 } from "../analysis/politicianRisk.js";
+import { buildRealEstateKatasterLinkRows } from "../scraper/realEstateKatasterLinks.js";
+import { estimateMovableAsset } from "../analysis/movableAssetEstimator.js";
 import { pool } from "./pool.js";
 
 const CATEGORY_TABLES = {
@@ -428,6 +430,85 @@ async function replaceCategoryItems(client, tableName, declarationId, items) {
   }
 }
 
+async function refreshMovableAssetEstimations(client, declarationId) {
+  const movableAssetsResult = await client.query(
+    `
+      SELECT id, item_text
+      FROM declaration_movable_assets
+      WHERE declaration_id = $1
+      ORDER BY id ASC
+    `,
+    [declarationId],
+  );
+
+  const movableAssetIds = movableAssetsResult.rows.map((row) => row.id);
+  if (movableAssetIds.length === 0) {
+    await client.query(
+      `DELETE FROM declaration_movable_asset_estimations WHERE declaration_id = $1`,
+      [declarationId],
+    );
+    return;
+  }
+
+  for (const movableAsset of movableAssetsResult.rows) {
+    const estimation = await estimateMovableAsset(movableAsset.item_text);
+    await client.query(
+      `
+        INSERT INTO declaration_movable_asset_estimations (
+          movable_asset_id,
+          declaration_id,
+          raw_item_text,
+          asset_type,
+          brand_or_maker,
+          year_of_manufacture,
+          llm_estimated_price_eur,
+          final_price_eur,
+          estimation_source,
+          confidence,
+          applied_rule,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+        ON CONFLICT (movable_asset_id)
+        DO UPDATE SET
+          declaration_id = EXCLUDED.declaration_id,
+          raw_item_text = EXCLUDED.raw_item_text,
+          asset_type = EXCLUDED.asset_type,
+          brand_or_maker = EXCLUDED.brand_or_maker,
+          year_of_manufacture = EXCLUDED.year_of_manufacture,
+          llm_estimated_price_eur = EXCLUDED.llm_estimated_price_eur,
+          final_price_eur = EXCLUDED.final_price_eur,
+          estimation_source = EXCLUDED.estimation_source,
+          confidence = EXCLUDED.confidence,
+          applied_rule = EXCLUDED.applied_rule,
+          updated_at = NOW()
+      `,
+      [
+        movableAsset.id,
+        declarationId,
+        estimation.raw,
+        estimation.assetType,
+        estimation.brandOrMaker,
+        estimation.yearOfManufacture,
+        estimation.llmEstimatedPriceEur,
+        estimation.finalPriceEur,
+        estimation.estimationSource,
+        estimation.confidence,
+        estimation.appliedRule,
+      ],
+    );
+  }
+
+  await client.query(
+    `
+      DELETE FROM declaration_movable_asset_estimations
+      WHERE declaration_id = $1
+        AND movable_asset_id <> ALL($2::BIGINT[])
+    `,
+    [declarationId, movableAssetIds],
+  );
+}
+
 export async function saveDeclaration(payload, dbPool = pool) {
   const client = await dbPool.connect();
   try {
@@ -451,8 +532,15 @@ export async function saveDeclaration(payload, dbPool = pool) {
 
     for (const [key, tableName] of Object.entries(CATEGORY_TABLES)) {
       const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
+      if (key === "realEstate") {
+        await replaceRealEstateItems(client, declarationId, items);
+        continue;
+      }
+
       await replaceCategoryItems(client, tableName, declarationId, items);
     }
+
+    await refreshMovableAssetEstimations(client, declarationId);
 
     await refreshPoliticianRiskFactor(client, politicianId);
 
@@ -1440,6 +1528,35 @@ async function fetchItemTable(client, tableName, declarationId) {
   return result.rows.map((row) => row.item_text);
 }
 
+async function fetchRealEstateCategory(client, declarationId, politicianFullName = null) {
+  const result = await client.query(
+    `
+      SELECT id, item_text
+      FROM declaration_real_estate
+      WHERE declaration_id = $1
+      ORDER BY id ASC
+    `,
+    [declarationId],
+  );
+
+  const records = [];
+  for (const row of result.rows) {
+    const katasterLinks = await buildRealEstateKatasterLinkRows(row.item_text, {
+      politicianFullName,
+    });
+    records.push({
+      id: row.id,
+      item_text: row.item_text,
+      kataster_links: katasterLinks,
+    });
+  }
+
+  return {
+    items: result.rows.map((row) => row.item_text),
+    records,
+  };
+}
+
 async function fetchDeclarationTimeline(client, politicianId) {
   const result = await client.query(
     `
@@ -1518,6 +1635,9 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
           deputy_profile_period,
           deputy_profile_url,
           deputy_profile_scraped_at,
+          instagram,
+          facebook,
+          twitter,
           created_at,
           updated_at
         FROM politicians
@@ -1594,6 +1714,16 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
 
     const categories = {};
     for (const [key, tableName] of Object.entries(CATEGORY_TABLES)) {
+      if (key === "realEstate") {
+        const realEstateCategory = await fetchRealEstateCategory(client, declaration.id, politician.full_name || null);
+        categories[key] = {
+          label: CATEGORY_LABELS[key],
+          items: realEstateCategory.items,
+          records: realEstateCategory.records,
+        };
+        continue;
+      }
+
       categories[key] = {
         label: CATEGORY_LABELS[key],
         items: await fetchItemTable(client, tableName, declaration.id),

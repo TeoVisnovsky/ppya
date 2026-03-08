@@ -16,6 +16,7 @@ const elements = {
   riskSummary: document.querySelector("#riskSummary"),
   riskFlags: document.querySelector("#riskFlags"),
   categoriesContainer: document.querySelector("#categoriesContainer"),
+  socialMediaIcons: document.querySelector("#socialMediaIcons"),
 };
 
 function escapeHtml(value) {
@@ -132,11 +133,19 @@ function parseMovableAssetItem(item) {
   return parseStructuredItem(item, ",", "Vec");
 }
 
-function getStructuredCategoryRows(categoryKey, items) {
-  if (categoryKey === "realEstate") {
-    return items.map(parseRealEstateItem);
+function buildRealEstateRows(category) {
+  const records = Array.isArray(category?.records) ? category.records : [];
+  if (!records.length) {
+    return [];
   }
 
+  return records.map((record) => ({
+    ...parseRealEstateItem(record.item_text),
+    __katasterLinks: Array.isArray(record.kataster_links) ? record.kataster_links : [],
+  }));
+}
+
+function getStructuredCategoryRows(categoryKey, items) {
   if (categoryKey === "movableAssets") {
     return items.map(parseMovableAssetItem);
   }
@@ -144,8 +153,74 @@ function getStructuredCategoryRows(categoryKey, items) {
   return null;
 }
 
-function renderStructuredCategoryTable(categoryKey, items) {
-  const rows = getStructuredCategoryRows(categoryKey, items);
+function renderLvButtons(katasterLinks) {
+  const usableLinks = katasterLinks.filter((link) => link?.publicPdfUrl);
+  if (!usableLinks.length) {
+    return '<span class="muted-inline">LV nedostupne</span>';
+  }
+
+  return `
+    <div class="lv-link-group">
+      ${usableLinks.map((link, index) => `
+        <a class="table-link lv-link" href="${escapeHtml(link.publicPdfUrl)}" target="_blank" rel="noreferrer">
+          ${escapeHtml(usableLinks.length > 1 ? `LV ${index + 1}` : "LV")}
+        </a>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderRealEstateCategoryTable(category) {
+  const rows = buildRealEstateRows(category);
+  if (!rows.length) {
+    return null;
+  }
+
+  const columns = [];
+  for (const row of rows) {
+    for (const key of Object.keys(row)) {
+      if (key === "__katasterLinks") {
+        continue;
+      }
+
+      if (!columns.includes(key)) {
+        columns.push(key);
+      }
+    }
+  }
+  columns.push("LV");
+
+  const header = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
+  const body = rows
+    .map((row) => {
+      const cells = columns.map((column) => {
+        if (column === "LV") {
+          return `<td>${renderLvButtons(row.__katasterLinks || [])}</td>`;
+        }
+
+        return `<td>${escapeHtml(row[column] || "-")}</td>`;
+      }).join("");
+
+      return `<tr>${cells}</tr>`;
+    })
+    .join("");
+
+  return `
+    <div class="detail-table-wrap">
+      <table class="detail-category-table">
+        <thead><tr>${header}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderStructuredCategoryTable(categoryKey, category) {
+  if (categoryKey === "realEstate") {
+    return renderRealEstateCategoryTable(category);
+  }
+
+  const rows = getStructuredCategoryRows(categoryKey, category.items);
   if (!rows || !rows.length) {
     return null;
   }
@@ -187,7 +262,7 @@ function renderCategoryCard(categoryKey, category) {
     `;
   }
 
-  const structuredTable = renderStructuredCategoryTable(categoryKey, category.items);
+  const structuredTable = renderStructuredCategoryTable(categoryKey, category);
   if (structuredTable) {
     return `
       <article class="category-card category-card-structured">
@@ -244,11 +319,185 @@ function renderSummary(activeDeclaration) {
     .join("");
 }
 
+function getSocialMediaIcons() {
+  return [
+    {
+      platform: 'instagram',
+      svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4c0 3.2-2.6 5.8-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8C2 4.6 4.6 2 7.8 2zm0 2C5.7 4 4 5.7 4 7.8v8.4c0 2.1 1.7 3.8 3.8 3.8h8.4c2.1 0 3.8-1.7 3.8-3.8V7.8c0-2.1-1.7-3.8-3.8-3.8H7.8zm8.5 3.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-4.3 2a3.5 3.5 0 110 7 3.5 3.5 0 010-7zm0 2a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>'
+    },
+    {
+      platform: 'facebook',
+      svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9h-3v5h-2v-5h-3V7h3V5.5c0-1.1.9-2 2-2h3v2h-3v1.5h3v2z"/></svg>'
+    },
+    {
+      platform: 'x',
+      svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.637l-5.206-6.807-5.979 6.807h-3.308l7.73-8.835L2.6 2.25h6.636l4.973 6.572 5.735-6.572zM17.55 19.5h1.828L6.281 4.05H4.306l13.244 15.45z"/></svg>'
+    },
+    {
+      platform: 'linkedin',
+      svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.48-2.23-1.67-2.23-.91 0-1.45.61-1.69 1.21-.09.21-.11.5-.11.79v5.8h-3.54s.05-9.41 0-10.39h3.54v1.47c.46-.71 1.28-1.72 3.11-1.72 2.27 0 3.97 1.48 3.97 4.66v5.98zM5.37 8.43c-1.14 0-1.88-.76-1.88-1.71 0-.96.73-1.71 1.92-1.71s1.87.75 1.93 1.71c0 .95-.73 1.71-1.97 1.71zm-1.68 12.02h3.55V9.04H3.69v11.41z"/></svg>'
+    }
+  ];
+}
+
+function renderSocialMediaIcons() {
+  const icons = getSocialMediaIcons();
+  
+  elements.socialMediaIcons.innerHTML = `
+    <div class="social-icons-container">
+      ${icons.map(icon => `
+        <div class="social-icon social-icon-${icon.platform}" title="${icon.platform}" aria-label="${icon.platform}">
+          ${icon.svg}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function renderProfileMeta(politician) {
   const candidatePartyList = Array.isArray(politician.candidate_party_memberships)
     && politician.candidate_party_memberships.length
     ? politician.candidate_party_memberships.join(" ; ")
     : (politician.candidate_party || "-");
+
+  function normalizeNameParts(fullName) {
+    const raw = String(fullName || "").trim();
+    if (!raw) {
+      return { firstName: null, lastName: null };
+    }
+
+    const compact = raw
+      .replace(/,/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const filteredParts = compact
+      .split(" ")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .filter((part) => !part.includes("."));
+
+    if (filteredParts.length < 2) {
+      return { firstName: null, lastName: null };
+    }
+
+    return {
+      firstName: filteredParts[0],
+      lastName: filteredParts[filteredParts.length - 1],
+    };
+  }
+
+  function latin2PercentEncode(value) {
+    // Use ISO-8859-2 (Latin-2) mapping for Slovak diacritics in ORSR query params.
+    const ISO_8859_2_MAP = {
+      "Á": 0xC1,
+      "Ä": 0xC4,
+      "Č": 0xC8,
+      "Ď": 0xCF,
+      "É": 0xC9,
+      "Í": 0xCD,
+      "Ĺ": 0xC5,
+      "Ľ": 0xA5,
+      "Ň": 0xD2,
+      "Ó": 0xD3,
+      "Ô": 0xD4,
+      "Ŕ": 0xC0,
+      "Š": 0xA9,
+      "Ť": 0xAB,
+      "Ú": 0xDA,
+      "Ý": 0xDD,
+      "Ž": 0xAE,
+      "á": 0xE1,
+      "ä": 0xE4,
+      "č": 0xE8,
+      "ď": 0xEF,
+      "é": 0xE9,
+      "í": 0xED,
+      "ĺ": 0xE5,
+      "ľ": 0xB5,
+      "ň": 0xF2,
+      "ó": 0xF3,
+      "ô": 0xF4,
+      "ŕ": 0xE0,
+      "š": 0xB9,
+      "ť": 0xBB,
+      "ú": 0xFA,
+      "ý": 0xFD,
+      "ž": 0xBE,
+    };
+
+    const input = String(value || "");
+
+    let encoded = "";
+    for (const originalChar of input) {
+      let char = originalChar;
+      let code = ISO_8859_2_MAP[char];
+
+      if (code == null) {
+        code = char.charCodeAt(0);
+      }
+
+      if (code > 0xff) {
+        const fallback = char.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        char = fallback || char;
+        code = char.charCodeAt(0);
+      }
+
+      if (/[A-Za-z0-9_.~-]/.test(char)) {
+        encoded += char;
+        continue;
+      }
+
+      if (char === " ") {
+        encoded += "%20";
+        continue;
+      }
+
+      if (code <= 0xff) {
+        encoded += `%${code.toString(16).toUpperCase().padStart(2, "0")}`;
+        continue;
+      }
+
+      encoded += encodeURIComponent(char);
+    }
+
+    return encoded;
+  }
+
+  function buildOrsrUrl(fullName) {
+    const { firstName, lastName } = normalizeNameParts(fullName);
+    if (!firstName || !lastName) {
+      return null;
+    }
+
+    const encodedLastName = latin2PercentEncode(lastName.toLowerCase());
+    const encodedFirstName = latin2PercentEncode(firstName.toLowerCase());
+
+    return `https://www.orsr.sk/hladaj_osoba.asp?PR=${encodedLastName}&MENO=${encodedFirstName}&SID=0&T=f0&R=on`;
+  }
+
+  function buildProfileLinks() {
+    const links = [];
+    const orsrUrl = buildOrsrUrl(politician.full_name);
+    if (orsrUrl) {
+      links.push({ label: "ORSR", url: orsrUrl });
+    }
+
+    if (politician.deputy_profile_url) {
+      links.push({ label: "NR SR", url: politician.deputy_profile_url });
+    }
+
+    return links;
+  }
+
+  const profileLinks = buildProfileLinks();
+  const profileLinksMarkup = profileLinks.length
+    ? `<div class="profile-link-list">${profileLinks
+      .map((link) => `
+        <a class="table-link profile-link-button" href="${escapeHtml(link.url)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>
+      `)
+      .join("")}</div>`
+    : "-";
 
   const items = [
     ["Titul", politician.deputy_title || "-"],
@@ -269,12 +518,7 @@ function renderProfileMeta(politician) {
         ? politician.parliamentary_memberships.join(" | ")
         : "-",
     ],
-    [
-      "Profil NR SR",
-      politician.deputy_profile_url
-        ? `<a href="${escapeHtml(politician.deputy_profile_url)}" target="_blank" rel="noreferrer">otvorit profil</a>`
-        : "-",
-    ],
+    ["Profily", profileLinksMarkup],
   ];
 
   elements.profileMeta.innerHTML = items.map(([label, value]) => `
@@ -283,6 +527,8 @@ function renderProfileMeta(politician) {
       <dd>${value}</dd>
     </div>
   `).join("");
+  
+  renderSocialMediaIcons();
 }
 
 function renderRiskSummary(riskAnalysis) {
@@ -407,6 +653,7 @@ function renderCategories(activeDeclaration) {
   const realEstateCategory = categories.realEstate || {
     label: "Vlastnictvo nehnutelnej veci",
     items: [],
+    records: [],
   };
   const movableAssetsCategory = categories.movableAssets || {
     label: "Vlastnictvo hnutelnej veci",

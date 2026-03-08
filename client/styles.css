@@ -179,6 +179,17 @@ button {
   min-width: 96px;
 }
 
+.profile-link-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-link-button {
+  min-width: 84px;
+  padding: 8px 14px;
+}
+
 .table-wrap {
   overflow: auto;
 }
@@ -224,6 +235,31 @@ tbody tr:hover {
 
 .summary-list dd {
   margin: 0;
+}
+
+.social-icons-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-top: 8px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--accent-soft);
+  color: var(--accent);
+}
+
+.social-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .muted-inline {
@@ -333,6 +369,17 @@ tbody tr:hover {
 .detail-category-table th,
 .detail-category-table td {
   padding: 10px 12px;
+}
+
+.lv-link-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lv-link {
+  min-width: 58px;
+  padding: 8px 12px;
 }
 
 .declaration-switcher {

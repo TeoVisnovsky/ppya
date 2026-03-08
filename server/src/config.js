@@ -97,4 +97,10 @@ export const config = {
   profileScraperMaxPeriod: parseNumber(process.env.PROFILE_SCRAPER_MAX_PERIOD, 9),
   profileScraperConcurrency: parseNumber(process.env.PROFILE_SCRAPER_CONCURRENCY, 6),
   profileScraperConsecutiveMissThreshold: parseNumber(process.env.PROFILE_SCRAPER_CONSECUTIVE_MISS_THRESHOLD, 0),
+  aiEstimationEnabled: parseBoolean(process.env.AI_ESTIMATION_ENABLED, false),
+  aiEstimationProvider: process.env.AI_ESTIMATION_PROVIDER || "gemini",
+  aiEstimationApiUrl: process.env.AI_ESTIMATION_API_URL || "https://generativelanguage.googleapis.com/v1beta/models",
+  aiEstimationApiKey: process.env.AI_ESTIMATION_API_KEY || process.env.GEMINI_API_KEY || "",
+  aiEstimationModel: process.env.AI_ESTIMATION_MODEL || "gemini-2.0-flash",
+  aiEstimationTimeoutMs: parseNumber(process.env.AI_ESTIMATION_TIMEOUT_MS, 12000),
 };
