@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { config } from "./config.js";
+import { registerChatbotRoutes } from "./chatbot/routes.js";
 import { runMigrations } from "./db/migrate.js";
 import {
   getPoliticianDetail,
@@ -24,6 +25,8 @@ const app = express();
 app.use(express.json());
 app.use(express.static(clientDir));
 
+registerChatbotRoutes(app);
+
 function getErrorMessage(error) {
   if (error?.code === "SELF_SIGNED_CERT_IN_CHAIN") {
     return "Database TLS verification failed while connecting to Supabase.";
@@ -40,8 +43,37 @@ function getErrorStatus(error) {
   return 500;
 }
 
+function resolveSafeKatasterRedirectTarget(rawUrl) {
+  if (!rawUrl) {
+    return null;
+  }
+
+  try {
+    const target = new URL(String(rawUrl));
+    const isAllowedHost = target.protocol === "https:" && target.hostname === "kataster.skgeodesy.sk";
+    const isAllowedPath = target.pathname === "/Portal45/api/Bo/GeneratePrfPublic";
+
+    if (!isAllowedHost || !isAllowedPath) {
+      return null;
+    }
+
+    return target.toString();
+  } catch {
+    return null;
+  }
+}
+
 app.get("/api/health", (_, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/kataster/open", (req, res) => {
+  const target = resolveSafeKatasterRedirectTarget(req.query.target);
+  if (!target) {
+    return res.status(400).json({ ok: false, error: "Invalid kataster target url" });
+  }
+
+  return res.redirect(target);
 });
 
 app.post("/api/migrate", async (_, res) => {
@@ -211,6 +243,10 @@ app.get("*", (req, res, next) => {
 
   if (req.path === "/voting" || req.path === "/voting.html") {
     return res.sendFile(path.join(clientDir, "voting.html"));
+  }
+
+  if (req.path === "/chatbot" || req.path === "/chatbot.html") {
+    return res.sendFile(path.join(clientDir, "chatbot.html"));
   }
 
   return res.sendFile(path.join(clientDir, "index.html"));

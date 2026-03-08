@@ -4,6 +4,7 @@ import {
   buildRiskAnalysis,
   buildTimelineEntry,
 } from "../analysis/politicianRisk.js";
+import { buildRealEstateKatasterLinkRows } from "../scraper/realEstateKatasterLinks.js";
 import { estimateMovableAsset } from "../analysis/movableAssetEstimator.js";
 import { pool } from "./pool.js";
 
@@ -396,85 +397,6 @@ async function replaceCategoryItems(client, tableName, declarationId, items) {
   }
 }
 
-async function refreshMovableAssetEstimations(client, declarationId) {
-  const movableAssetsResult = await client.query(
-    `
-      SELECT id, item_text
-      FROM declaration_movable_assets
-      WHERE declaration_id = $1
-      ORDER BY id ASC
-    `,
-    [declarationId],
-  );
-
-  const movableAssetIds = movableAssetsResult.rows.map((row) => row.id);
-  if (movableAssetIds.length === 0) {
-    await client.query(
-      `DELETE FROM declaration_movable_asset_estimations WHERE declaration_id = $1`,
-      [declarationId],
-    );
-    return;
-  }
-
-  for (const movableAsset of movableAssetsResult.rows) {
-    const estimation = await estimateMovableAsset(movableAsset.item_text);
-    await client.query(
-      `
-        INSERT INTO declaration_movable_asset_estimations (
-          movable_asset_id,
-          declaration_id,
-          raw_item_text,
-          asset_type,
-          brand_or_maker,
-          year_of_manufacture,
-          llm_estimated_price_eur,
-          final_price_eur,
-          estimation_source,
-          confidence,
-          applied_rule,
-          updated_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
-        ON CONFLICT (movable_asset_id)
-        DO UPDATE SET
-          declaration_id = EXCLUDED.declaration_id,
-          raw_item_text = EXCLUDED.raw_item_text,
-          asset_type = EXCLUDED.asset_type,
-          brand_or_maker = EXCLUDED.brand_or_maker,
-          year_of_manufacture = EXCLUDED.year_of_manufacture,
-          llm_estimated_price_eur = EXCLUDED.llm_estimated_price_eur,
-          final_price_eur = EXCLUDED.final_price_eur,
-          estimation_source = EXCLUDED.estimation_source,
-          confidence = EXCLUDED.confidence,
-          applied_rule = EXCLUDED.applied_rule,
-          updated_at = NOW()
-      `,
-      [
-        movableAsset.id,
-        declarationId,
-        estimation.raw,
-        estimation.assetType,
-        estimation.brandOrMaker,
-        estimation.yearOfManufacture,
-        estimation.llmEstimatedPriceEur,
-        estimation.finalPriceEur,
-        estimation.estimationSource,
-        estimation.confidence,
-        estimation.appliedRule,
-      ],
-    );
-  }
-
-  await client.query(
-    `
-      DELETE FROM declaration_movable_asset_estimations
-      WHERE declaration_id = $1
-        AND movable_asset_id <> ALL($2::BIGINT[])
-    `,
-    [declarationId, movableAssetIds],
-  );
-}
-
 export async function saveDeclaration(payload, dbPool = pool) {
   const client = await dbPool.connect();
   try {
@@ -498,6 +420,11 @@ export async function saveDeclaration(payload, dbPool = pool) {
 
     for (const [key, tableName] of Object.entries(CATEGORY_TABLES)) {
       const items = Array.isArray(payload.categories[key]) ? payload.categories[key] : [];
+      if (key === "realEstate") {
+        await replaceRealEstateItems(client, declarationId, items);
+        continue;
+      }
+
       await replaceCategoryItems(client, tableName, declarationId, items);
     }
 
@@ -526,6 +453,23 @@ export async function savePoliticianProfile(payload, dbPool = pool) {
         candidate_party = COALESCE($5, candidate_party),
         parliamentary_club = COALESCE($6, parliamentary_club),
         parliamentary_memberships = COALESCE($7::jsonb, parliamentary_memberships),
+        deputy_title = COALESCE($8, deputy_title),
+        deputy_first_name = COALESCE($9, deputy_first_name),
+        deputy_last_name = COALESCE($10, deputy_last_name),
+        deputy_birth_date = COALESCE($11, deputy_birth_date),
+        deputy_birth_date_text = COALESCE($12, deputy_birth_date_text),
+        deputy_nationality = COALESCE($13, deputy_nationality),
+        deputy_residence = COALESCE($14, deputy_residence),
+        deputy_region = COALESCE($15, deputy_region),
+        deputy_email = COALESCE($16, deputy_email),
+        deputy_website = COALESCE($17, deputy_website),
+        candidate_party_memberships = COALESCE($18::jsonb, candidate_party_memberships),
+        deputy_personal_data = COALESCE($19::jsonb, deputy_personal_data),
+        deputy_photo_url = COALESCE($20, deputy_photo_url),
+        deputy_photo_content_type = COALESCE($21, deputy_photo_content_type),
+        deputy_photo_data = COALESCE($22, deputy_photo_data),
+        deputy_photo_scraped_at = CASE WHEN $20 IS NOT NULL OR $22 IS NOT NULL THEN NOW() ELSE deputy_photo_scraped_at END,
+        deputy_term_info = COALESCE($23::jsonb, deputy_term_info),
         deputy_profile_scraped_at = NOW(),
         updated_at = NOW()
       WHERE id = $1
@@ -538,6 +482,22 @@ export async function savePoliticianProfile(payload, dbPool = pool) {
       payload.candidateParty ?? null,
       payload.parliamentaryClub ?? null,
       JSON.stringify(payload.parliamentaryMemberships || []),
+      payload.deputyTitle ?? null,
+      payload.deputyFirstName ?? null,
+      payload.deputyLastName ?? null,
+      payload.deputyBirthDate ?? null,
+      payload.deputyBirthDateText ?? null,
+      payload.deputyNationality ?? null,
+      payload.deputyResidence ?? null,
+      payload.deputyRegion ?? null,
+      payload.deputyEmail ?? null,
+      payload.deputyWebsite ?? null,
+      JSON.stringify(payload.candidatePartyMemberships || []),
+      JSON.stringify(payload.deputyPersonalData || {}),
+      payload.deputyPhotoUrl ?? null,
+      payload.deputyPhotoContentType ?? null,
+      payload.deputyPhotoData ?? null,
+      JSON.stringify(payload.deputyTermInfo || {}),
     ],
   );
 }
@@ -1079,6 +1039,33 @@ async function fetchItemTable(client, tableName, declarationId) {
   return result.rows.map((row) => row.item_text);
 }
 
+async function fetchRealEstateCategory(client, declarationId) {
+  const result = await client.query(
+    `
+      SELECT id, item_text
+      FROM declaration_real_estate
+      WHERE declaration_id = $1
+      ORDER BY id ASC
+    `,
+    [declarationId],
+  );
+
+  const records = [];
+  for (const row of result.rows) {
+    const katasterLinks = await buildRealEstateKatasterLinkRows(row.item_text);
+    records.push({
+      id: row.id,
+      item_text: row.item_text,
+      kataster_links: katasterLinks,
+    });
+  }
+
+  return {
+    items: result.rows.map((row) => row.item_text),
+    records,
+  };
+}
+
 async function fetchDeclarationTimeline(client, politicianId) {
   const result = await client.query(
     `
@@ -1134,12 +1121,32 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
           nrsr_user_id,
           full_name,
           candidate_party,
+          candidate_party_memberships,
           parliamentary_club,
           parliamentary_memberships,
+          deputy_title,
+          deputy_first_name,
+          deputy_last_name,
+          deputy_birth_date,
+          deputy_birth_date_text,
+          deputy_nationality,
+          deputy_residence,
+          deputy_region,
+          deputy_email,
+          deputy_website,
+          deputy_photo_url,
+          deputy_photo_content_type,
+          deputy_photo_data,
+          deputy_photo_scraped_at,
+          deputy_term_info,
+          deputy_personal_data,
           deputy_profile_id,
           deputy_profile_period,
           deputy_profile_url,
           deputy_profile_scraped_at,
+          instagram,
+          facebook,
+          twitter,
           created_at,
           updated_at
         FROM politicians
@@ -1151,6 +1158,12 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
     const politician = politicianResult.rows[0];
     if (!politician) {
       return null;
+    }
+
+    if (politician.deputy_photo_data && politician.deputy_photo_content_type) {
+      politician.deputy_photo_data = Buffer.from(politician.deputy_photo_data).toString("base64");
+    } else {
+      politician.deputy_photo_data = null;
     }
 
     await ensurePoliticianRiskFactorsCurrent(client, politicianId);
@@ -1213,6 +1226,16 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
 
     const categories = {};
     for (const [key, tableName] of Object.entries(CATEGORY_TABLES)) {
+      if (key === "realEstate") {
+        const realEstateCategory = await fetchRealEstateCategory(client, declaration.id);
+        categories[key] = {
+          label: CATEGORY_LABELS[key],
+          items: realEstateCategory.items,
+          records: realEstateCategory.records,
+        };
+        continue;
+      }
+
       categories[key] = {
         label: CATEGORY_LABELS[key],
         items: await fetchItemTable(client, tableName, declaration.id),
@@ -1283,7 +1306,12 @@ export async function getTableData(tableName, limit = 100, offset = 0) {
   const safeTableName = quoteIdentifier(tableName);
   const columnsResult = await pool.query(
     `
-      SELECT column_name
+      SELECT
+        column_name,
+        data_type,
+        udt_name,
+        is_nullable,
+        column_default
       FROM information_schema.columns
       WHERE table_schema = 'public' AND table_name = $1
       ORDER BY ordinal_position ASC
@@ -1299,7 +1327,13 @@ export async function getTableData(tableName, limit = 100, offset = 0) {
 
   return {
     tableName,
-    columns: columnsResult.rows.map((row) => row.column_name),
+    columns: columnsResult.rows.map((row) => ({
+      name: row.column_name,
+      dataType: row.data_type,
+      udtName: row.udt_name,
+      nullable: row.is_nullable === 'YES',
+      defaultValue: row.column_default,
+    })),
     totalCount: Number(countResult.rows[0]?.total_count || 0),
     rows: rowsResult.rows,
   };
