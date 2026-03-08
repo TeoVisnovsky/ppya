@@ -157,10 +157,12 @@ node src/scraper/nrsrScraper.js
 ## Notes
 
 - Scraping logic currently parses the declaration table and maps data into category-specific tables.
+- The main scrape now also enriches matched current MPs with candidate party and parliamentary club from NR SR deputy profile pages.
 - `declaration_voting` exists in schema for your requested `hlasovanie` category and can be populated when source pages expose voting records.
 - `politician_voting_stats` stores aggregate voting counts per politician and per `CisObdobia`, matched back to existing `politicians` rows by normalized name.
 - The voting scraper writes to every configured target in `LOCAL_DATABASE_URL` and `SUPABASE_DATABASE_URL`, deduplicating identical connection strings.
 - `searchable_chunks` gets a `vector(1536)` column only when `pgvector` is available in your PostgreSQL installation.
+- Politician detail now exposes heuristic risk coefficients based on salary-to-income ratios, asset-count changes, and other-income pressure against a maintained Slovak salary baseline.
 
 ## Move Local Data To Supabase
 

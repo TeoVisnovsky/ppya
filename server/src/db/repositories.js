@@ -1,4 +1,10 @@
 import crypto from "node:crypto";
+import {
+  buildActiveSideJobs,
+  buildListRiskSummary,
+  buildRiskAnalysisFromTimeline,
+  buildTimelineEntry,
+} from "../analysis/politicianRisk.js";
 import { pool } from "./pool.js";
 
 const CATEGORY_TABLES = {
@@ -189,6 +195,33 @@ export async function saveDeclaration(payload, dbPool = pool) {
   } finally {
     client.release();
   }
+}
+
+export async function savePoliticianProfile(payload, dbPool = pool) {
+  await dbPool.query(
+    `
+      UPDATE politicians
+      SET
+        deputy_profile_id = COALESCE($2, deputy_profile_id),
+        deputy_profile_period = COALESCE($3, deputy_profile_period),
+        deputy_profile_url = COALESCE($4, deputy_profile_url),
+        candidate_party = COALESCE($5, candidate_party),
+        parliamentary_club = COALESCE($6, parliamentary_club),
+        parliamentary_memberships = COALESCE($7::jsonb, parliamentary_memberships),
+        deputy_profile_scraped_at = NOW(),
+        updated_at = NOW()
+      WHERE id = $1
+    `,
+    [
+      payload.politicianId,
+      payload.deputyProfileId ?? null,
+      payload.deputyProfilePeriod ?? null,
+      payload.deputyProfileUrl ?? null,
+      payload.candidateParty ?? null,
+      payload.parliamentaryClub ?? null,
+      JSON.stringify(payload.parliamentaryMemberships || []),
+    ],
+  );
 }
 
 export async function listPoliticiansForMatching(dbPool = pool) {
@@ -479,8 +512,12 @@ export async function listPoliticians(limit = 100) {
         p.id,
         p.nrsr_user_id,
         p.full_name,
+        p.candidate_party,
+        p.parliamentary_club,
+        p.parliamentary_memberships,
         p.created_at,
         p.updated_at,
+        latest.id AS latest_declaration_id,
         latest.declaration_year AS latest_declaration_year,
         latest.public_function AS latest_public_function,
         latest.scraped_at AS latest_scraped_at,
@@ -488,7 +525,20 @@ export async function listPoliticians(limit = 100) {
         latestIncome.public_function_income_amount AS latest_public_function_income_amount,
         latestIncome.other_income_amount AS latest_other_income_amount,
         latestIncome.total_income_amount AS latest_total_income_amount,
+        latestSideJobs.employment_count AS latest_employment_count,
+        latestSideJobs.business_activity_count AS latest_business_activity_count,
+        latestSideJobs.public_function_role_count AS latest_public_function_role_count,
+        previous.id AS previous_declaration_id,
+        previous.declaration_year AS previous_declaration_year,
+        previous.public_function AS previous_public_function,
+        previousIncome.public_function_income_amount AS previous_public_function_income_amount,
+        previousIncome.other_income_amount AS previous_other_income_amount,
+        previousIncome.total_income_amount AS previous_total_income_amount,
         COALESCE(wealth.wealth_item_count, 0)::INT AS wealth_item_count,
+        COALESCE(previousWealth.wealth_item_count, 0)::INT AS previous_wealth_item_count,
+        previousSideJobs.employment_count AS previous_employment_count,
+        previousSideJobs.business_activity_count AS previous_business_activity_count,
+        previousSideJobs.public_function_role_count AS previous_public_function_role_count,
         COUNT(d.id)::INT AS declaration_count
       FROM politicians p
       LEFT JOIN declarations d ON d.politician_id = p.id
@@ -500,11 +550,24 @@ export async function listPoliticians(limit = 100) {
         LIMIT 1
       ) latest ON true
       LEFT JOIN LATERAL (
+        SELECT id, declaration_year, public_function
+        FROM declarations
+        WHERE politician_id = p.id AND (latest.id IS NULL OR id <> latest.id)
+        ORDER BY declaration_year DESC NULLS LAST, id DESC
+        LIMIT 1
+      ) previous ON true
+      LEFT JOIN LATERAL (
         SELECT income_text, public_function_income_amount, other_income_amount, total_income_amount
         FROM declaration_income
         WHERE declaration_id = latest.id
         LIMIT 1
       ) latestIncome ON true
+      LEFT JOIN LATERAL (
+        SELECT public_function_income_amount, other_income_amount, total_income_amount
+        FROM declaration_income
+        WHERE declaration_id = previous.id
+        LIMIT 1
+      ) previousIncome ON true
       LEFT JOIN LATERAL (
         SELECT
           (
@@ -513,13 +576,43 @@ export async function listPoliticians(limit = 100) {
             + COALESCE((SELECT COUNT(*) FROM declaration_property_rights WHERE declaration_id = latest.id), 0)
           )::INT AS wealth_item_count
       ) wealth ON true
-      GROUP BY p.id, latest.declaration_year, latest.public_function, latest.scraped_at, latestIncome.income_text, latestIncome.public_function_income_amount, latestIncome.other_income_amount, latestIncome.total_income_amount, wealth.wealth_item_count
+      LEFT JOIN LATERAL (
+        SELECT
+          (
+            COALESCE((SELECT COUNT(*) FROM declaration_real_estate WHERE declaration_id = previous.id), 0)
+            + COALESCE((SELECT COUNT(*) FROM declaration_movable_assets WHERE declaration_id = previous.id), 0)
+            + COALESCE((SELECT COUNT(*) FROM declaration_property_rights WHERE declaration_id = previous.id), 0)
+          )::INT AS wealth_item_count
+      ) previousWealth ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          COALESCE((SELECT COUNT(*) FROM declaration_employment WHERE declaration_id = latest.id), 0)::INT AS employment_count,
+          COALESCE((SELECT COUNT(*) FROM declaration_business_activities WHERE declaration_id = latest.id), 0)::INT AS business_activity_count,
+          COALESCE((SELECT COUNT(*) FROM declaration_public_functions_during_term WHERE declaration_id = latest.id), 0)::INT AS public_function_role_count
+      ) latestSideJobs ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          COALESCE((SELECT COUNT(*) FROM declaration_employment WHERE declaration_id = previous.id), 0)::INT AS employment_count,
+          COALESCE((SELECT COUNT(*) FROM declaration_business_activities WHERE declaration_id = previous.id), 0)::INT AS business_activity_count,
+          COALESCE((SELECT COUNT(*) FROM declaration_public_functions_during_term WHERE declaration_id = previous.id), 0)::INT AS public_function_role_count
+      ) previousSideJobs ON true
+      GROUP BY p.id, latest.id, latest.declaration_year, latest.public_function, latest.scraped_at, latestIncome.income_text, latestIncome.public_function_income_amount, latestIncome.other_income_amount, latestIncome.total_income_amount, latestSideJobs.employment_count, latestSideJobs.business_activity_count, latestSideJobs.public_function_role_count, previous.id, previous.declaration_year, previous.public_function, previousIncome.public_function_income_amount, previousIncome.other_income_amount, previousIncome.total_income_amount, wealth.wealth_item_count, previousWealth.wealth_item_count, previousSideJobs.employment_count, previousSideJobs.business_activity_count, previousSideJobs.public_function_role_count
       ORDER BY p.full_name NULLS LAST
       LIMIT $1
     `,
     [limit],
   );
-  return result.rows;
+  return result.rows.map((row) => {
+    const riskSummary = buildListRiskSummary(row);
+    return {
+      ...row,
+      suspicious_score: riskSummary.suspicious_score,
+      suspicious_level: riskSummary.suspicious_level,
+      suspicious_flags: riskSummary.flags,
+      suspicious_flags_count: riskSummary.flags_count,
+      suspicious_coefficients: riskSummary.coefficients,
+    };
+  });
 }
 
 export async function listPoliticianVotingStats(limit = 5000) {
@@ -678,12 +771,69 @@ async function fetchItemTable(client, tableName, declarationId) {
   return result.rows.map((row) => row.item_text);
 }
 
+async function fetchDeclarationTimeline(client, politicianId) {
+  const result = await client.query(
+    `
+      SELECT
+        d.id AS declaration_id,
+        d.declaration_year,
+        d.public_function,
+        di.public_function_income_amount,
+        di.other_income_amount,
+        di.total_income_amount,
+        COALESCE(realEstate.count, 0)
+          + COALESCE(movableAssets.count, 0)
+          + COALESCE(propertyRights.count, 0) AS asset_item_count,
+        COALESCE(employment.count, 0) AS employment_count,
+        COALESCE(businessActivities.count, 0) AS business_activity_count,
+        COALESCE(publicFunctionsDuringTerm.count, 0) AS public_function_role_count
+      FROM declarations d
+      LEFT JOIN declaration_income di ON di.declaration_id = d.id
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::INT AS count FROM declaration_real_estate WHERE declaration_id = d.id
+      ) realEstate ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::INT AS count FROM declaration_movable_assets WHERE declaration_id = d.id
+      ) movableAssets ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::INT AS count FROM declaration_property_rights WHERE declaration_id = d.id
+      ) propertyRights ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::INT AS count FROM declaration_employment WHERE declaration_id = d.id
+      ) employment ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::INT AS count FROM declaration_business_activities WHERE declaration_id = d.id
+      ) businessActivities ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::INT AS count FROM declaration_public_functions_during_term WHERE declaration_id = d.id
+      ) publicFunctionsDuringTerm ON true
+      WHERE d.politician_id = $1
+      ORDER BY d.declaration_year DESC NULLS LAST, d.id DESC
+    `,
+    [politicianId],
+  );
+
+  return result.rows;
+}
+
 export async function getPoliticianDetail(politicianId, declarationId = null) {
   const client = await pool.connect();
   try {
     const politicianResult = await client.query(
       `
-        SELECT id, nrsr_user_id, full_name, created_at, updated_at
+        SELECT
+          id,
+          nrsr_user_id,
+          full_name,
+          candidate_party,
+          parliamentary_club,
+          parliamentary_memberships,
+          deputy_profile_id,
+          deputy_profile_period,
+          deputy_profile_url,
+          deputy_profile_scraped_at,
+          created_at,
+          updated_at
         FROM politicians
         WHERE id = $1
       `,
@@ -696,6 +846,9 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
     }
 
     const declarations = await listDeclarationsByPolitician(politicianId);
+    const timelineRows = await fetchDeclarationTimeline(client, politicianId);
+    const timeline = timelineRows.map(buildTimelineEntry);
+    const riskAnalysis = buildRiskAnalysisFromTimeline(timelineRows);
     const activeDeclaration = declarationId
       ? declarations.find((item) => item.id === declarationId)
       : declarations[0];
@@ -704,6 +857,8 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
       return {
         politician,
         declarations,
+        timeline,
+        riskAnalysis,
         activeDeclaration: null,
       };
     }
@@ -731,6 +886,8 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
       return {
         politician,
         declarations,
+        timeline,
+        riskAnalysis,
         activeDeclaration: null,
       };
     }
@@ -751,9 +908,14 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
       };
     }
 
+    const activeTimelineEntry = timeline.find((entry) => entry.declaration_id === declaration.id) || null;
+    const activeSideJobs = buildActiveSideJobs(categories);
+
     return {
       politician,
       declarations,
+      timeline,
+      riskAnalysis,
       activeDeclaration: {
         ...declaration,
         income_text: income?.income_text ?? null,
@@ -761,6 +923,11 @@ export async function getPoliticianDetail(politicianId, declarationId = null) {
         other_income_amount: income?.other_income_amount ?? null,
         total_income_amount: income?.total_income_amount ?? null,
         incompatibility,
+        asset_item_count: activeTimelineEntry?.asset_item_count ?? 0,
+        salary_to_income_ratio: activeTimelineEntry?.salary_to_income_ratio ?? null,
+        other_income_to_average_salary_ratio: activeTimelineEntry?.other_income_to_average_salary_ratio ?? null,
+        side_job_count: activeTimelineEntry?.side_job_count ?? 0,
+        side_jobs: activeSideJobs,
         categories,
       },
     };

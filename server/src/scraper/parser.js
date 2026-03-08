@@ -32,6 +32,10 @@ function cleanText(value) {
   return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function normalizeFieldLabel(value) {
+  return cleanText(value).replace(/:$/, "");
+}
+
 function normalizeLabel(value) {
   return cleanText(value).replace(/:$/, "").toLowerCase();
 }
@@ -253,6 +257,51 @@ function parseVotingResultRow($, row, sourceUrl) {
     detailUrl,
     cptUrl,
     rowHtml: $.html(row) || "",
+  };
+}
+
+export function parseDeputyProfileHtml({ html, sourceUrl, poslanecId, cisObdobia }) {
+  const $ = cheerio.load(html);
+  const personalData = {};
+
+  $(".mp_personal_data strong").each((_, strong) => {
+    const label = normalizeFieldLabel($(strong).text());
+    const value = cleanText($(strong).next("span").text());
+    if (label) {
+      personalData[label] = value || null;
+    }
+  });
+
+  const memberships = [];
+  $(".box").each((_, box) => {
+    const heading = cleanText($(box).find("h2").first().text());
+    if (!/členstvo/i.test(heading)) {
+      return;
+    }
+
+    $(box).find("li").each((__, item) => {
+      const text = cleanText($(item).text());
+      if (text) {
+        memberships.push(text);
+      }
+    });
+  });
+
+  const title = $("h1").first().clone();
+  title.find(".print").remove();
+
+  const fullName = cleanText(title.text()) || null;
+  const parliamentaryClub = memberships.find((item) => /^Klub\s+/i.test(item)) || null;
+
+  return {
+    poslanecId,
+    cisObdobia,
+    fullName,
+    sourceUrl,
+    candidateParty: personalData["Kandidoval(a) za"] || null,
+    parliamentaryClub: parliamentaryClub ? parliamentaryClub.replace(/^Klub\s+/i, "").trim() : null,
+    memberships,
+    personalData,
   };
 }
 

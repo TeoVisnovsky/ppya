@@ -4,17 +4,48 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PPYA | Detail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <div class="page-shell detail-shell">
+  <body class="landing-page detail-page">
+    <svg class="goo-filter" aria-hidden="true" width="0" height="0" focusable="false">
+      <filter id="gooey-metaballs">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="26" result="blur" />
+        <feColorMatrix
+          in="blur"
+          mode="matrix"
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"
+          result="goo"
+        />
+        <feBlend in="SourceGraphic" in2="goo" />
+      </filter>
+    </svg>
+
+    <div class="metaball-scene" aria-hidden="true">
+      <div class="metaball-cluster">
+        <span class="metaball metaball-1"></span>
+        <span class="metaball metaball-2"></span>
+        <span class="metaball metaball-3"></span>
+        <span class="metaball metaball-4"></span>
+        <span class="metaball metaball-5"></span>
+      </div>
+      <div class="ambient-haze ambient-haze-1"></div>
+      <div class="ambient-haze ambient-haze-2"></div>
+    </div>
+
+    <div class="page-shell page-shell--landing detail-shell">
       <header class="hero compact-hero">
-        <div>
+        <div class="hero-copy-block">
           <p class="eyebrow"><a href="/">Spat na zoznam</a></p>
           <h1 id="detailTitle">Detail politika</h1>
           <p id="detailSubtitle" class="hero-copy">Nacitavam detail priznania...</p>
         </div>
-        <div class="declaration-switcher">
+        <div class="declaration-switcher panel panel-soft detail-switcher">
           <label>
             <span>Vyber priznanie</span>
             <select id="declarationSelect"></select>
@@ -23,11 +54,27 @@
       </header>
 
       <main class="detail-layout">
+        <section class="panel risk-panel">
+          <div class="panel-header">
+            <h2>Profil a riziko</h2>
+          </div>
+          <dl id="profileMeta" class="summary-list"></dl>
+          <div id="riskSummary" class="risk-summary"></div>
+          <div id="riskFlags" class="risk-flags"></div>
+        </section>
+
         <section class="panel summary-panel">
           <div class="panel-header">
             <h2>Zakladne info</h2>
           </div>
           <dl id="summaryList" class="summary-list"></dl>
+        </section>
+
+        <section class="panel timeline-panel">
+          <div class="panel-header">
+            <h2>Vyvoj v case</h2>
+          </div>
+          <div id="timelineContainer" class="detail-table-wrap"></div>
         </section>
 
         <section class="panel categories-panel">

@@ -4,79 +4,120 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PPYA | Politicians</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <div class="page-shell">
+  <body class="landing-page">
+    <svg class="goo-filter" aria-hidden="true" width="0" height="0" focusable="false">
+      <filter id="gooey-metaballs">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="26" result="blur" />
+        <feColorMatrix
+          in="blur"
+          mode="matrix"
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"
+          result="goo"
+        />
+        <feBlend in="SourceGraphic" in2="goo" />
+      </filter>
+    </svg>
+
+    <div class="metaball-scene" aria-hidden="true">
+      <div class="metaball-cluster">
+        <span class="metaball metaball-1"></span>
+        <span class="metaball metaball-2"></span>
+        <span class="metaball metaball-3"></span>
+        <span class="metaball metaball-4"></span>
+        <span class="metaball metaball-5"></span>
+      </div>
+      <div class="ambient-haze ambient-haze-1"></div>
+      <div class="ambient-haze ambient-haze-2"></div>
+    </div>
+
+    <div class="page-shell page-shell--landing">
       <header class="hero">
-        <div>
+        <div class="hero-copy-block">
           <p class="eyebrow">PPYA</p>
-          <h1>Majetkove priznania politikov</h1>
+          <h1>Sleek prehlad majetkov a rizika politikov</h1>
           <p class="hero-copy">
-            Prehlad politikov, poslednych priznani a rychly vstup do detailu majetku.
+            Cisty tmavy povrch, rychle filtrovanie a sklenena tabulka pre novinarske prezeranie prijmov,
+            majetku a rizikovych signalov.
           </p>
-          <p class="hero-copy"><a class="table-link" href="/voting.html">Otvorit tabulku hlasovani</a></p>
+          <div class="hero-actions">
+            <a class="table-link table-link-primary" href="/voting.html">Otvorit tabulku hlasovani</a>
+          </div>
+        </div>
+        <div class="hero-aside panel panel-soft">
+          <p class="hero-stat-label">Dataset</p>
+          <p class="hero-stat-value">Politici, prijmy, majetok, risk faktor</p>
+          <p class="hero-stat-copy">Vyhladavaj podla mena, funkcie alebo strany a zorad zoznam podla rizika, prijmov alebo velkosti majetku.</p>
         </div>
       </header>
 
-      <main class="content-grid">
-        <section class="panel filters-panel">
-          <div class="panel-header">
-            <h2>Vyhladavanie</h2>
-            <p>Filtruj podla mena, funkcie a roku priznania.</p>
-          </div>
-          <div class="filters">
-            <label>
-              <span>Meno alebo UserId</span>
-              <input id="searchInput" type="search" placeholder="napr. Kacmar" />
-            </label>
-            <label>
-              <span>Funkcia</span>
-              <input id="functionInput" type="search" placeholder="napr. poslanec" />
-            </label>
-            <label>
-              <span>Rok</span>
-              <select id="yearSelect">
-                <option value="">Vsetky roky</option>
-              </select>
-            </label>
-            <label>
-              <span>Zoradenie</span>
-              <select id="sortSelect">
-                <option value="firstNameAsc">Abecedne podla mena</option>
-                <option value="surnameAsc">Abecedne podla priezviska</option>
-                <option value="firstNameDesc">Obratene abecedne podla mena</option>
-                <option value="surnameDesc">Obratene abecedne podla priezviska</option>
-                <option value="wealthDesc">Velkost majetku od najvacsieho</option>
-                <option value="wealthAsc">Velkost majetku od najmensieho</option>
-                <option value="incomeDesc">Prijmy od najvyssich</option>
-                <option value="incomeAsc">Prijmy od najnizsich</option>
-              </select>
-            </label>
-          </div>
-        </section>
-
-        <section class="panel table-panel">
-          <div class="panel-header inline-header">
-            <div>
-              <h2>Zoznam politikov</h2>
+      <main>
+        <section class="panel glass-table-shell">
+          <div class="glass-table-topbar">
+            <div class="panel-header">
+              <h2>Politici</h2>
               <p id="resultsInfo">Nacitavam data...</p>
             </div>
             <button id="reloadButton" class="ghost-button" type="button">Obnovit</button>
           </div>
 
-          <div class="table-wrap">
-            <table>
+          <div class="toolbar-grid">
+            <label class="control control-search control-wide">
+              <span>Search</span>
+              <input id="searchInput" type="search" placeholder="Hladaj meno, user ID alebo stranu" />
+            </label>
+            <label class="control">
+              <span>Funkcia</span>
+              <input id="functionInput" type="search" placeholder="napr. poslanec" />
+            </label>
+            <label class="control">
+              <span>Politicka strana</span>
+              <select id="partySelect">
+                <option value="">Vsetky strany</option>
+              </select>
+            </label>
+            <label class="control">
+              <span>Risk faktor</span>
+              <select id="riskSelect">
+                <option value="all">Vsetky urovne</option>
+                <option value="high">Vysoke</option>
+                <option value="medium">Stredne</option>
+                <option value="low">Nizke</option>
+                <option value="none">Bez signalu</option>
+              </select>
+            </label>
+            <label class="control">
+              <span>Zoradenie</span>
+              <select id="sortSelect">
+                <option value="firstNameAsc">Meno A-Z</option>
+                <option value="surnameAsc">Priezvisko A-Z</option>
+                <option value="incomeDesc">Prijmy od najvyssich</option>
+                <option value="incomeAsc">Prijmy od najnizsich</option>
+                <option value="wealthDesc">Velkost majetku od najvacsieho</option>
+                <option value="wealthAsc">Velkost majetku od najmensieho</option>
+                <option value="riskDesc">Riziko od najvyssieho</option>
+                <option value="riskAsc">Riziko od najnizsieho</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="table-wrap glass-table-wrap">
+            <table class="politicians-table">
               <thead>
                 <tr>
                   <th>Meno</th>
-                  <th>UserId</th>
-                  <th>Posledny rok</th>
                   <th>Funkcia</th>
+                  <th>Politicka strana</th>
                   <th>Prijmy</th>
                   <th>Velkost majetku</th>
-                  <th>Pocet priznani</th>
-                  <th>Detail</th>
+                  <th>Risk faktor</th>
                 </tr>
               </thead>
               <tbody id="politiciansTableBody"></tbody>
