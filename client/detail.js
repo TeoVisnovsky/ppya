@@ -223,8 +223,8 @@ function renderProfileMeta(politician) {
 }
 
 function renderRiskSummary(riskAnalysis) {
-  const level = String(riskAnalysis?.suspicious_level || "none");
-  const score = Number(riskAnalysis?.suspicious_score) || 0;
+  const level = String(riskAnalysis?.risk_level || "none");
+  const score = Number(riskAnalysis?.risk_factor) || 0;
   const labels = {
     high: "Vysoke riziko",
     medium: "Stredne riziko",
@@ -233,10 +233,12 @@ function renderRiskSummary(riskAnalysis) {
   };
   const coefficients = riskAnalysis?.coefficients || {};
   const items = [
-    ["Skore", `${labels[level] || labels.none} (${score}/100)`],
+    ["Risk faktor", `${labels[level] || labels.none} (${score.toFixed(2)})`],
     ["Tento rok plat / prijmy", coefficients.current_salary_to_income_ratio ?? "-"],
     ["Minuly rok plat / prijmy", coefficients.previous_salary_to_income_ratio ?? "-"],
-    ["Zmena pomeru plat / prijmy", coefficients.salary_to_income_ratio_change ?? "-"],
+    ["Pomer tohto a minuleho roku", coefficients.salary_to_income_change_ratio ?? "-"],
+    ["Assety tento rok", riskAnalysis?.current_asset_item_count ?? 0],
+    ["Assety minuly rok", riskAnalysis?.previous_asset_item_count ?? 0],
     ["Pomer poctu majetkovych poloziek", coefficients.asset_item_count_ratio ?? "-"],
     ["Ine prijmy / priemerna mzda", coefficients.other_income_to_average_salary_ratio ?? "-"],
   ];
@@ -248,13 +250,15 @@ function renderRiskSummary(riskAnalysis) {
     </div>
   `).join("");
 
-  const flags = Array.isArray(riskAnalysis?.flags) ? riskAnalysis.flags : [];
-  if (!flags.length) {
-    elements.riskFlags.innerHTML = '<p class="category-empty">Zatial bez heuristickych varovnych signalov.</p>';
-    return;
+  const notes = [
+    "Vzorec: ((tento rok plat / tento rok prijmy) / (minuly rok plat / minuly rok prijmy)) + (assety tento rok / assety minuly rok) + (ine prijmy / priemerna slovenska mzda).",
+  ];
+
+  if (!riskAnalysis?.previous_declaration_id) {
+    notes.push("Chyba predchadzajuce priznanie, takze medzirocne pomery mozu byt prazdne.");
   }
 
-  elements.riskFlags.innerHTML = flags.map((flag) => `<div class="risk-flag">${escapeHtml(flag)}</div>`).join("");
+  elements.riskFlags.innerHTML = notes.map((note) => `<div class="risk-flag">${escapeHtml(note)}</div>`).join("");
 }
 
 function buildMockTimeline(activeDeclaration) {

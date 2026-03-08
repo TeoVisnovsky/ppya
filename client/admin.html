@@ -4,17 +4,48 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PPYA | Database</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <div class="page-shell db-shell">
+  <body class="landing-page db-page">
+    <svg class="goo-filter" aria-hidden="true" width="0" height="0" focusable="false">
+      <filter id="gooey-metaballs">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="26" result="blur" />
+        <feColorMatrix
+          in="blur"
+          mode="matrix"
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"
+          result="goo"
+        />
+        <feBlend in="SourceGraphic" in2="goo" />
+      </filter>
+    </svg>
+
+    <div class="metaball-scene" aria-hidden="true">
+      <div class="metaball-cluster">
+        <span class="metaball metaball-1"></span>
+        <span class="metaball metaball-2"></span>
+        <span class="metaball metaball-3"></span>
+        <span class="metaball metaball-4"></span>
+        <span class="metaball metaball-5"></span>
+      </div>
+      <div class="ambient-haze ambient-haze-1"></div>
+      <div class="ambient-haze ambient-haze-2"></div>
+    </div>
+
+    <div class="page-shell page-shell--landing db-shell">
       <header class="hero compact-hero">
-        <div>
+        <div class="hero-copy-block">
           <p class="eyebrow"><a href="/">Spat na zoznam</a></p>
           <h1>Databazovy prehlad</h1>
           <p class="hero-copy">Jednoduchy prehliadac tabuliek ulozenych v PostgreSQL.</p>
         </div>
-        <div class="declaration-switcher">
+        <div class="declaration-switcher panel panel-soft detail-switcher">
           <label>
             <span>Pocet riadkov</span>
             <select id="limitSelect">
@@ -39,7 +70,7 @@
           <div id="tablesList" class="tables-list"></div>
         </section>
 
-        <section class="panel db-table-panel">
+        <section class="panel db-table-panel glass-table-shell">
           <div class="panel-header inline-header">
             <div>
               <h2 id="tableTitle">Vyber tabulku</h2>
@@ -50,7 +81,7 @@
               <button id="nextPageButton" class="ghost-button" type="button">Dalsia</button>
             </div>
           </div>
-          <div id="tableContainer" class="table-wrap"></div>
+          <div id="tableContainer" class="table-wrap glass-table-wrap"></div>
         </section>
       </main>
     </div>

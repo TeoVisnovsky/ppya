@@ -83,7 +83,7 @@ function renderRows(result) {
     .join("");
 
   elements.tableContainer.innerHTML = `
-    <table>
+    <table class="db-data-table">
       <thead><tr>${header}</tr></thead>
       <tbody>${body}</tbody>
     </table>

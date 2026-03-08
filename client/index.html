@@ -84,6 +84,12 @@
               </select>
             </label>
             <label class="control">
+              <span>Rok</span>
+              <select id="yearSelect">
+                <option value="">Vsetky roky</option>
+              </select>
+            </label>
+            <label class="control">
               <span>Risk faktor</span>
               <select id="riskSelect">
                 <option value="all">Vsetky urovne</option>
@@ -96,13 +102,15 @@
             <label class="control">
               <span>Zoradenie</span>
               <select id="sortSelect">
+                <option value="riskDesc" selected>Riziko od najvyssieho</option>
                 <option value="firstNameAsc">Meno A-Z</option>
                 <option value="surnameAsc">Priezvisko A-Z</option>
+                <option value="yearDesc">Rok od najnovsieho</option>
+                <option value="yearAsc">Rok od najstarsieho</option>
                 <option value="incomeDesc">Prijmy od najvyssich</option>
                 <option value="incomeAsc">Prijmy od najnizsich</option>
                 <option value="wealthDesc">Velkost majetku od najvacsieho</option>
                 <option value="wealthAsc">Velkost majetku od najmensieho</option>
-                <option value="riskDesc">Riziko od najvyssieho</option>
                 <option value="riskAsc">Riziko od najnizsieho</option>
               </select>
             </label>

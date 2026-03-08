@@ -661,7 +661,7 @@ tbody tr:hover {
 .toolbar-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.5fr) repeat(5, minmax(0, 1fr));
   margin-bottom: 18px;
 }
 
@@ -829,6 +829,98 @@ tbody tr:hover {
 
 .detail-page .detail-shell {
   max-width: 1540px;
+}
+
+.db-page .db-shell {
+  max-width: 1540px;
+}
+
+.db-page h1 {
+  max-width: none;
+  font-size: clamp(2.6rem, 5.5vw, 4.6rem);
+  line-height: 0.96;
+}
+
+.db-page .db-layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.db-page .db-sidebar-panel,
+.db-page .db-table-panel {
+  min-width: 0;
+}
+
+.db-page .db-sidebar-panel {
+  position: sticky;
+  top: 24px;
+}
+
+.db-page .tables-list {
+  max-height: calc(100vh - 280px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.db-page .table-item {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.db-page .table-item small {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.db-page .table-item.active {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.db-page .db-pagination {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.db-page .db-table-panel .table-wrap {
+  max-height: calc(100vh - 270px);
+}
+
+.db-page .db-table-panel table {
+  min-width: 880px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.db-page .db-table-panel th,
+.db-page .db-table-panel td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.db-page .db-table-panel th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(18, 18, 18, 0.92);
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.db-page .db-table-panel td {
+  color: rgba(255, 255, 255, 0.94);
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.db-page .db-table-panel tbody tr:hover {
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .detail-page .compact-hero {
@@ -1246,6 +1338,19 @@ tbody tr:hover {
 
   .detail-page .declaration-switcher {
     min-width: 100%;
+  }
+
+  .db-page .db-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .db-page .db-sidebar-panel {
+    position: static;
+  }
+
+  .db-page .db-table-panel .table-wrap,
+  .db-page .tables-list {
+    max-height: none;
   }
 }
 

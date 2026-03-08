@@ -8,6 +8,7 @@ const elements = {
   searchInput: document.querySelector("#searchInput"),
   functionInput: document.querySelector("#functionInput"),
   partySelect: document.querySelector("#partySelect"),
+  yearSelect: document.querySelector("#yearSelect"),
   riskSelect: document.querySelector("#riskSelect"),
   sortSelect: document.querySelector("#sortSelect"),
   reloadButton: document.querySelector("#reloadButton"),
@@ -129,8 +130,8 @@ function getWealthDeltaLabel(row) {
 }
 
 function getSuspicionBadge(row) {
-  const level = String(row.suspicious_level || "none");
-  const score = Number(row.suspicious_score) || 0;
+  const level = String(row.risk_level || "none");
+  const score = Number(row.risk_factor) || 0;
   const labels = {
     high: "Vysoke",
     medium: "Stredne",
@@ -138,7 +139,7 @@ function getSuspicionBadge(row) {
     none: "Bez signalu",
   };
 
-  return `<span class="risk-pill risk-${escapeHtml(level)}">${escapeHtml(labels[level] || labels.none)} ${escapeHtml(score)}</span>`;
+  return `<span class="risk-pill risk-${escapeHtml(level)}">${escapeHtml(labels[level] || labels.none)} ${escapeHtml(score.toFixed(2))}</span>`;
 }
 
 function sortRows(rows, forcedSortValue = null) {
@@ -170,6 +171,14 @@ function sortRows(rows, forcedSortValue = null) {
         return (Number(left.wealth_item_count) || 0) - (Number(right.wealth_item_count) || 0)
           || compareText(leftName.surname, rightName.surname, "asc");
       }
+      case "yearDesc": {
+        return (Number(right.latest_declaration_year) || 0) - (Number(left.latest_declaration_year) || 0)
+          || compareText(leftName.surname, rightName.surname, "asc");
+      }
+      case "yearAsc": {
+        return (Number(left.latest_declaration_year) || 0) - (Number(right.latest_declaration_year) || 0)
+          || compareText(leftName.surname, rightName.surname, "asc");
+      }
       case "assetJumpDesc": {
         return getAssetJumpDelta(right) - getAssetJumpDelta(left)
           || compareText(leftName.surname, rightName.surname, "asc");
@@ -187,11 +196,11 @@ function sortRows(rows, forcedSortValue = null) {
           || compareText(leftName.surname, rightName.surname, "asc");
       }
       case "riskDesc": {
-        return (Number(right.suspicious_score) || 0) - (Number(left.suspicious_score) || 0)
+        return (Number(right.risk_factor) || 0) - (Number(left.risk_factor) || 0)
           || compareText(leftName.surname, rightName.surname, "asc");
       }
       case "riskAsc": {
-        return (Number(left.suspicious_score) || 0) - (Number(right.suspicious_score) || 0)
+        return (Number(left.risk_factor) || 0) - (Number(right.risk_factor) || 0)
           || compareText(leftName.surname, rightName.surname, "asc");
       }
       case "firstNameAsc":
@@ -251,10 +260,22 @@ function populatePartyFilter(rows) {
   ].join("");
 }
 
+function populateYearFilter(rows) {
+  const years = Array.from(
+    new Set(rows.map((row) => row.latest_declaration_year).filter(Boolean)),
+  ).sort((left, right) => Number(right) - Number(left));
+
+  elements.yearSelect.innerHTML = [
+    '<option value="">Vsetky roky</option>',
+    ...years.map((year) => `<option value="${escapeHtml(year)}">${escapeHtml(year)}</option>`),
+  ].join("");
+}
+
 function applyFilters() {
   const searchValue = normalize(elements.searchInput.value);
   const functionValue = normalize(elements.functionInput.value);
   const partyValue = normalize(elements.partySelect.value);
+  const yearValue = elements.yearSelect.value;
   const riskValue = elements.riskSelect.value;
 
   const filtered = state.politicians.filter((row) => {
@@ -270,9 +291,11 @@ function applyFilters() {
 
     const matchesParty = !partyValue || normalize(getPartyValue(row)) === partyValue;
 
-    const matchesRisk = riskValue === "all" || String(row.suspicious_level || "none") === riskValue;
+    const matchesYear = !yearValue || String(row.latest_declaration_year || "") === yearValue;
 
-    return matchesSearch && matchesFunction && matchesParty && matchesRisk;
+    const matchesRisk = riskValue === "all" || String(row.risk_level || "none") === riskValue;
+
+    return matchesSearch && matchesFunction && matchesParty && matchesYear && matchesRisk;
   });
 
   const sorted = sortRows(filtered);
@@ -304,6 +327,7 @@ async function loadPoliticians() {
 
   state.politicians = payload.rows;
   populatePartyFilter(payload.rows);
+  populateYearFilter(payload.rows);
   applyFilters();
 }
 
@@ -311,6 +335,7 @@ function bindEvents() {
   elements.searchInput.addEventListener("input", applyFilters);
   elements.functionInput.addEventListener("input", applyFilters);
   elements.partySelect.addEventListener("change", applyFilters);
+  elements.yearSelect.addEventListener("change", applyFilters);
   elements.riskSelect.addEventListener("change", applyFilters);
   elements.sortSelect.addEventListener("change", applyFilters);
   elements.reloadButton.addEventListener("click", () => {
