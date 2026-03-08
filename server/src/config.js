@@ -92,4 +92,10 @@ export const config = {
   votingScraperMaxPeriod: parseNumber(process.env.VOTING_SCRAPER_MAX_PERIOD, 9),
   votingScraperMaxPoliticianMasterId: parseNumber(process.env.VOTING_SCRAPER_MAX_POLITICIAN_MASTER_ID, 5000),
   votingScraperConsecutiveMissThreshold: parseNumber(process.env.VOTING_SCRAPER_CONSECUTIVE_MISS_THRESHOLD, 200),
+  aiEstimationEnabled: parseBoolean(process.env.AI_ESTIMATION_ENABLED, false),
+  aiEstimationProvider: process.env.AI_ESTIMATION_PROVIDER || "gemini",
+  aiEstimationApiUrl: process.env.AI_ESTIMATION_API_URL || "https://generativelanguage.googleapis.com/v1beta/models",
+  aiEstimationApiKey: process.env.AI_ESTIMATION_API_KEY || process.env.GEMINI_API_KEY || "",
+  aiEstimationModel: process.env.AI_ESTIMATION_MODEL || "gemini-2.0-flash",
+  aiEstimationTimeoutMs: parseNumber(process.env.AI_ESTIMATION_TIMEOUT_MS, 12000),
 };

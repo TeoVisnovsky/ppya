@@ -179,6 +179,17 @@ button {
   min-width: 96px;
 }
 
+.profile-link-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-link-button {
+  min-width: 84px;
+  padding: 8px 14px;
+}
+
 .table-wrap {
   overflow: auto;
 }
