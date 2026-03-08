@@ -19,6 +19,16 @@ const elements = {
   socialMediaIcons: document.querySelector("#socialMediaIcons"),
 };
 
+const realEstateMapState = {
+  map: null,
+  markersLayer: null,
+};
+
+const REAL_ESTATE_GEOCODE_CACHE_KEY = "ppya-real-estate-geocode-cache-v1";
+const realEstateGeocodeCache = new Map();
+
+hydrateRealEstateGeocodeCache();
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -170,10 +180,244 @@ function renderLvButtons(katasterLinks) {
   `;
 }
 
+function normalizeTextForMap(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function readCachedGeocodeEntries() {
+  try {
+    const raw = localStorage.getItem(REAL_ESTATE_GEOCODE_CACHE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistGeocodeCache() {
+  try {
+    localStorage.setItem(
+      REAL_ESTATE_GEOCODE_CACHE_KEY,
+      JSON.stringify(Array.from(realEstateGeocodeCache.entries())),
+    );
+  } catch {
+    // Ignore persistence failures in private mode or restricted environments.
+  }
+}
+
+function hydrateRealEstateGeocodeCache() {
+  const entries = readCachedGeocodeEntries();
+  for (const entry of entries) {
+    if (!Array.isArray(entry) || entry.length !== 2) {
+      continue;
+    }
+
+    const [key, value] = entry;
+    if (typeof key !== "string" || !value || typeof value !== "object") {
+      continue;
+    }
+
+    if (Number.isFinite(value.lat) && Number.isFinite(value.lon)) {
+      realEstateGeocodeCache.set(key, value);
+    }
+  }
+}
+
+function destroyRealEstateMap() {
+  if (realEstateMapState.map) {
+    realEstateMapState.map.remove();
+  }
+
+  realEstateMapState.map = null;
+  realEstateMapState.markersLayer = null;
+}
+
+function extractLandRegisterNumbers(itemText) {
+  const source = String(itemText || "");
+  const match = source.match(/(?:č[ií]slo|cislo)\s*LV\s*:\s*([^;]+?)(?=;|$)/i);
+  if (!match?.[1]) {
+    return [];
+  }
+
+  return Array.from(new Set(Array.from(match[1].matchAll(/\d+/g), (hit) => hit[0])));
+}
+
+function buildRealEstateMapRecords(category) {
+  const records = Array.isArray(category?.records) ? category.records : [];
+  return records
+    .map((record) => {
+      const parsed = parseRealEstateItem(record.item_text);
+      const links = Array.isArray(record.kataster_links) ? record.kataster_links : [];
+      const derivedArea = String(parsed["Kat. uzemie"] || "").trim();
+      const fallbackArea = links.find((link) => link?.cadastralArea)?.cadastralArea
+        || links.find((link) => link?.matchedDisplayName)?.matchedDisplayName
+        || "";
+      const cadastralArea = derivedArea || String(fallbackArea || "").trim();
+
+      return {
+        id: record.id,
+        type: String(parsed.Typ || "Nehnutelnost"),
+        cadastralArea,
+        landRegisterNumbers: extractLandRegisterNumbers(record.item_text),
+        katasterLinks: links,
+      };
+    })
+    .filter((entry) => entry.cadastralArea);
+}
+
+async function geocodeCadastralArea(cadastralArea) {
+  const key = normalizeTextForMap(cadastralArea);
+  if (!key) {
+    return null;
+  }
+
+  const cached = realEstateGeocodeCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const query = `${cadastralArea}, Slovakia`;
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("countrycodes", "sk");
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = await response.json();
+  const first = Array.isArray(payload) ? payload[0] : null;
+  const lat = Number(first?.lat);
+  const lon = Number(first?.lon);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return null;
+  }
+
+  const result = { lat, lon };
+  realEstateGeocodeCache.set(key, result);
+  persistGeocodeCache();
+  return result;
+}
+
+function renderRealEstateMapSection() {
+  return `
+    <section class="real-estate-map-section" aria-label="Mapa nehnutelnosti politika">
+      <div class="real-estate-map-heading">
+        <h4>Mapa nehnutelnosti na Slovensku</h4>
+        <p id="realEstateMapStatus" class="real-estate-map-status">Nacitavam mapu...</p>
+      </div>
+      <div id="realEstateMap" class="real-estate-map" role="img" aria-label="Mapa Slovenska s nehnutelnostami"></div>
+    </section>
+  `;
+}
+
+async function renderRealEstateMap(category) {
+  const mapElement = document.querySelector("#realEstateMap");
+  const statusElement = document.querySelector("#realEstateMapStatus");
+  if (!mapElement || !statusElement) {
+    return;
+  }
+
+  destroyRealEstateMap();
+
+  const entries = buildRealEstateMapRecords(category);
+  if (!entries.length) {
+    statusElement.textContent = "Pre tuto deklaraciu sa nenasli pouzitelne kat. uzemia.";
+    return;
+  }
+
+  if (typeof window.L === "undefined") {
+    statusElement.textContent = "Mapova kniznica sa nepodarila nacitat.";
+    return;
+  }
+
+  const map = window.L.map(mapElement, {
+    center: [48.7, 19.5],
+    zoom: 7,
+    minZoom: 6,
+    maxZoom: 14,
+    zoomControl: true,
+  });
+  realEstateMapState.map = map;
+
+  window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+
+  const geocodedEntries = await Promise.all(
+    entries.map(async (entry) => {
+      const coords = await geocodeCadastralArea(entry.cadastralArea);
+      return { ...entry, coords };
+    }),
+  );
+
+  const located = geocodedEntries.filter((entry) => entry.coords);
+  if (!located.length) {
+    statusElement.textContent = "Nepodarilo sa geokodovat kat. uzemia pre mapu.";
+    return;
+  }
+
+  const markersLayer = window.L.layerGroup().addTo(map);
+  realEstateMapState.markersLayer = markersLayer;
+
+  const bounds = [];
+  for (const entry of located) {
+    const marker = window.L.marker([entry.coords.lat, entry.coords.lon]);
+    const lvLinks = entry.katasterLinks
+      .filter((link) => link?.publicPdfUrl)
+      .map((link, index) => `<a class="table-link lv-link" href="${escapeHtml(link.publicPdfUrl)}" target="_blank" rel="noreferrer">${escapeHtml(entry.katasterLinks.length > 1 ? `LV ${index + 1}` : "LV")}</a>`)
+      .join(" ");
+
+    marker.bindPopup(`
+      <div class="real-estate-popup">
+        <strong>${escapeHtml(entry.type)}</strong>
+        <div>${escapeHtml(entry.cadastralArea)}</div>
+        <div>LV: ${escapeHtml(entry.landRegisterNumbers.join(", ") || "-")}</div>
+        <div class="real-estate-popup-links">${lvLinks || ""}</div>
+      </div>
+    `);
+    marker.addTo(markersLayer);
+    bounds.push([entry.coords.lat, entry.coords.lon]);
+  }
+
+  if (bounds.length === 1) {
+    map.setView(bounds[0], 10);
+  } else {
+    map.fitBounds(bounds, { padding: [24, 24] });
+  }
+
+  const missingCount = entries.length - located.length;
+  statusElement.textContent = missingCount > 0
+    ? `Zobrazene: ${located.length}/${entries.length}. ${missingCount} poloziek sa nepodarilo lokalizovat.`
+    : `Zobrazene vsetky nehnutelnosti (${located.length}).`;
+
+  window.setTimeout(() => {
+    map.invalidateSize();
+  }, 0);
+}
+
 function renderRealEstateCategoryTable(category) {
   const rows = buildRealEstateRows(category);
   if (!rows.length) {
-    return null;
+    return `${renderRealEstateMapSection()}<div class="muted-inline">Bez zaznamov nehnutelnosti.</div>`;
   }
 
   const columns = [];
@@ -206,6 +450,7 @@ function renderRealEstateCategoryTable(category) {
     .join("");
 
   return `
+    ${renderRealEstateMapSection()}
     <div class="detail-table-wrap">
       <table class="detail-category-table">
         <thead><tr>${header}</tr></thead>
@@ -633,6 +878,8 @@ function renderMockTimelineChart(activeDeclaration) {
 }
 
 function renderCategories(activeDeclaration) {
+  destroyRealEstateMap();
+
   const categories = activeDeclaration?.categories || {};
   const realEstateCategory = categories.realEstate || {
     label: "Vlastnictvo nehnutelnej veci",
@@ -646,6 +893,12 @@ function renderCategories(activeDeclaration) {
 
   elements.realEstateContainer.innerHTML = renderCategoryCard("realEstate", realEstateCategory);
   elements.movableAssetsContainer.innerHTML = renderCategoryCard("movableAssets", movableAssetsCategory);
+  renderRealEstateMap(realEstateCategory).catch(() => {
+    const statusElement = document.querySelector("#realEstateMapStatus");
+    if (statusElement) {
+      statusElement.textContent = "Pri nacitani mapy nastala chyba.";
+    }
+  });
 
   const orderedOtherKeys = [
     "propertyRights",
@@ -694,6 +947,7 @@ function renderEmpty() {
   elements.riskFlags.innerHTML = "";
   elements.categoriesContainer.innerHTML = '<div class="error-box">Zatial nie su k dispozicii ziadne data.</div>';
   elements.declarationSelect.innerHTML = "";
+  destroyRealEstateMap();
 }
 
 async function loadDetail(declarationId) {
@@ -740,6 +994,7 @@ function renderError(error) {
   elements.riskSummary.innerHTML = "";
   elements.riskFlags.innerHTML = "";
   elements.categoriesContainer.innerHTML = "";
+  destroyRealEstateMap();
 }
 
 elements.declarationSelect.addEventListener("change", (event) => {

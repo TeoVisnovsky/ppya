@@ -1258,6 +1258,65 @@ tbody tr:hover {
   overflow: auto;
 }
 
+.detail-page .real-estate-map-section {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.detail-page .real-estate-map-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.detail-page .real-estate-map-heading h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.detail-page .real-estate-map-status {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.detail-page .real-estate-map {
+  height: 280px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.detail-page .real-estate-popup {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.detail-page .real-estate-popup-links {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.detail-page .leaflet-popup-content-wrapper,
+.detail-page .leaflet-popup-tip {
+  background: rgba(18, 18, 18, 0.94);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.detail-page .leaflet-control-attribution {
+  background: rgba(18, 18, 18, 0.78);
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.detail-page .leaflet-control-attribution a {
+  color: rgba(255, 255, 255, 0.82);
+}
+
 .detail-page .detail-category-table {
   min-width: 100%;
 }
