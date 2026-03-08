@@ -1067,45 +1067,36 @@ tbody tr:hover {
 }
 
 .detail-page .detail-dashboard {
-  display: flex;
+  display: grid;
   gap: 20px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   align-items: flex-start;
-}
-
-.detail-page .detail-column {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 0;
-}
-
-.detail-page .detail-column-left {
-  flex: 0 1 360px;
-}
-
-.detail-page .detail-column-right {
-  flex: 1 1 0;
+  grid-auto-flow: row dense;
 }
 
 .detail-page .detail-window {
   min-width: 0;
 }
 
-.detail-page .assets-row {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
+.detail-page .info-window {
+  grid-column: span 4;
 }
 
-.detail-page .assets-row .detail-window {
-  flex: 1 1 0;
+.detail-page .chart-window {
+  grid-column: span 8;
 }
 
-.detail-page .info-window,
-.detail-page .risk-window,
-.detail-page .chart-window,
+.detail-page .risk-window {
+  grid-column: span 4;
+}
+
 .detail-page .categories-window {
-  width: 100%;
+  grid-column: span 8;
+}
+
+.detail-page .real-estate-window,
+.detail-page .movable-window {
+  grid-column: span 6;
 }
 
 .detail-page .info-window-stack {
@@ -1240,7 +1231,7 @@ tbody tr:hover {
 }
 
 .detail-page .window-scroll-area {
-  max-height: 360px;
+  max-height: clamp(280px, 48vh, 620px);
   overflow: auto;
   padding-right: 4px;
 }
@@ -1567,13 +1558,17 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
-  .detail-page .detail-dashboard,
-  .detail-page .assets-row {
-    flex-direction: column;
-  }
-
   .detail-page .declaration-switcher {
     min-width: 100%;
+  }
+
+  .detail-page .info-window,
+  .detail-page .chart-window,
+  .detail-page .risk-window,
+  .detail-page .real-estate-window,
+  .detail-page .movable-window,
+  .detail-page .categories-window {
+    grid-column: 1 / -1;
   }
 
   .db-page .db-layout {
@@ -1596,12 +1591,15 @@ tbody tr:hover {
 
 @media (max-width: 1260px) {
   .detail-page .detail-dashboard {
-    flex-direction: column;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .detail-page .detail-column-left,
-  .detail-page .detail-column-right {
-    flex: 1 1 auto;
-    width: 100%;
+  .detail-page .info-window,
+  .detail-page .chart-window,
+  .detail-page .risk-window,
+  .detail-page .categories-window,
+  .detail-page .real-estate-window,
+  .detail-page .movable-window {
+    grid-column: span 1;
   }
 }

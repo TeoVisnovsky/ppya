@@ -117,7 +117,102 @@ export function classifyRiskFactor(score) {
   return "low";
 }
 
+function buildLiveRiskAnalysis({
+  latestDeclarationId = null,
+  previousDeclarationId = null,
+  latestDeclarationYear = null,
+  latestPublicFunctionIncomeAmount = null,
+  latestOtherIncomeAmount = null,
+  latestTotalIncomeAmount = null,
+  previousPublicFunctionIncomeAmount = null,
+  previousTotalIncomeAmount = null,
+  currentAssetItemCount = null,
+  previousAssetItemCount = null,
+  timeline = [],
+} = {}) {
+  const currentSalaryToIncomeRatio = formatRatio(
+    safeRatio(latestPublicFunctionIncomeAmount, latestTotalIncomeAmount),
+    4,
+  );
+  const previousSalaryToIncomeRatio = formatRatio(
+    safeRatio(previousPublicFunctionIncomeAmount, previousTotalIncomeAmount),
+    4,
+  );
+  const salaryToIncomeChangeRatio = formatRatio(
+    safeRatio(currentSalaryToIncomeRatio, previousSalaryToIncomeRatio),
+    4,
+  );
+  const assetItemCountRatio = formatRatio(
+    safeRatio(currentAssetItemCount, previousAssetItemCount),
+    4,
+  );
+  const averageSlovakAnnualSalary = getAverageSalaryForYear(latestDeclarationYear);
+  const otherIncomeToAverageSalaryRatio = formatRatio(
+    safeRatio(latestOtherIncomeAmount, averageSlovakAnnualSalary),
+    4,
+  );
+  const riskFactor = round(
+    (salaryToIncomeChangeRatio ?? 0)
+      + (assetItemCountRatio ?? 0)
+      + (otherIncomeToAverageSalaryRatio ?? 0),
+    4,
+  ) ?? 0;
+
+  return {
+    risk_factor: riskFactor,
+    risk_level: classifyRiskFactor(riskFactor),
+    latest_declaration_id: latestDeclarationId,
+    previous_declaration_id: previousDeclarationId,
+    current_asset_item_count: toNumber(currentAssetItemCount) ?? 0,
+    previous_asset_item_count: toNumber(previousAssetItemCount) ?? 0,
+    other_income_amount: toNumber(latestOtherIncomeAmount),
+    average_slovak_annual_salary: toNumber(averageSlovakAnnualSalary),
+    coefficients: {
+      current_salary_to_income_ratio: currentSalaryToIncomeRatio,
+      previous_salary_to_income_ratio: previousSalaryToIncomeRatio,
+      salary_to_income_change_ratio: salaryToIncomeChangeRatio,
+      asset_item_count_ratio: assetItemCountRatio,
+      other_income_to_average_salary_ratio: otherIncomeToAverageSalaryRatio,
+    },
+    timeline,
+  };
+}
+
+export function buildRiskAnalysisFromListRow(row) {
+  return buildLiveRiskAnalysis({
+    latestDeclarationId: row?.latest_declaration_id ?? null,
+    previousDeclarationId: row?.previous_declaration_id ?? null,
+    latestDeclarationYear: row?.latest_declaration_year ?? null,
+    latestPublicFunctionIncomeAmount: row?.latest_public_function_income_amount ?? null,
+    latestOtherIncomeAmount: row?.latest_other_income_amount ?? null,
+    latestTotalIncomeAmount: row?.latest_total_income_amount ?? null,
+    previousPublicFunctionIncomeAmount: row?.previous_public_function_income_amount ?? null,
+    previousTotalIncomeAmount: row?.previous_total_income_amount ?? null,
+    currentAssetItemCount: row?.wealth_item_count ?? null,
+    previousAssetItemCount: row?.previous_wealth_item_count ?? null,
+  });
+}
+
 export function buildRiskAnalysis(rawRiskRow, timeline = []) {
+  if (Array.isArray(timeline) && timeline.length) {
+    const latest = timeline[0];
+    const previous = timeline[1] || null;
+
+    return buildLiveRiskAnalysis({
+      latestDeclarationId: latest?.declaration_id ?? null,
+      previousDeclarationId: previous?.declaration_id ?? null,
+      latestDeclarationYear: latest?.declaration_year ?? null,
+      latestPublicFunctionIncomeAmount: latest?.public_function_income_amount ?? null,
+      latestOtherIncomeAmount: latest?.other_income_amount ?? null,
+      latestTotalIncomeAmount: latest?.total_income_amount ?? null,
+      previousPublicFunctionIncomeAmount: previous?.public_function_income_amount ?? null,
+      previousTotalIncomeAmount: previous?.total_income_amount ?? null,
+      currentAssetItemCount: latest?.asset_item_count ?? null,
+      previousAssetItemCount: previous?.asset_item_count ?? null,
+      timeline,
+    });
+  }
+
   const riskFactor = formatRatio(rawRiskRow?.risk_factor, 4) ?? 0;
 
   return {
